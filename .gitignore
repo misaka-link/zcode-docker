@@ -1,0 +1,57 @@
+# 构建与运行时产物
+.build/
+.upstream/
+node_modules/
+gateway/node_modules/
+.pnpm-store/
+tmp/
+
+# 本地数据卷（容器挂载点，不入库）
+data/
+workspace/
+
+# 日志与缓存
+*.log
+.cache/
+npm-debug.log*
+
+# 本地环境配置与私密凭据
+.env
+.env.local
+*.pem
+*.key
+
+# 规则与私有规划文档（严禁上传 GitHub，本地私有）
+PROJECT_RULES.md
+RULES.md
+*RULES.md
+PROJECT_PLAN.md
+*PLAN.md
+REMOTE_DEBUG.md
+*DEBUG.md
+
+# 验证与测试临时目录与产物（含远程测试生成物）
+.verify*/
+.verify/
+.verify-compose/
+.verify-dist/
+scripts/remote-*.mjs
+scripts/remote.mjs
+scripts/mcp-remote-*.mjs
+scripts/remote-verify.sh
+scripts/remote-compose-verify.sh
+scripts/remote-dist-test.sh
+screenshot*.png
+
+# 本地调试材料（规则第九条：审计/验证文档与实测截图严禁上传）
+doc/verification-report.md
+doc/upstream-contract.md
+doc/*.png
+doc/*.jpg
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

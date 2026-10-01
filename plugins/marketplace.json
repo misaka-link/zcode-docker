@@ -1,0 +1,26 @@
+{
+  "name": "zcode-docker-local",
+  "description": "zcode-docker 套件自带插件市场（本地目录安装）",
+  "description_i18n": {
+    "en": "Plugins shipped with the zcode-docker suite (local directory install).",
+    "zh-CN": "zcode-docker 套件自带插件市场（本地目录安装）。"
+  },
+  "owner": {
+    "name": "zcode-docker"
+  },
+  "plugins": [
+    {
+      "name": "zcode-browser-desktop",
+      "source": "./zcode-browser-desktop",
+      "description": "ZCode 容器浏览器与虚拟桌面控制：通过 MCP 工具驱动容器内 Chromium（打开网页、截屏、点击、输入、等待）",
+      "description_i18n": {
+        "en": "Container browser & virtual desktop control for ZCode: drive the in-container Chromium via MCP tools.",
+        "zh-CN": "ZCode 容器浏览器与虚拟桌面控制：通过 MCP 工具驱动容器内 Chromium（打开网页、截屏、点击、输入、等待）。"
+      },
+      "version": "1.0.0",
+      "author": {
+        "name": "zcode-docker"
+      }
+    }
+  ]
+}

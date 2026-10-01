@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "browser": {
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/mcp-server/index.mjs"
+      ]
+    }
+  }
+}

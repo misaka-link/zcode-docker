@@ -1,0 +1,38 @@
+{
+  "name": "zcode-docker",
+  "version": "0.1.0",
+  "description": "开箱即用的 ZCode 容器化套件：统一网关 + 访问认证 + 初始化向导 + Web 控制台 + 快照备份 + noVNC 桌面",
+  "core": {
+    "name": "ZCode",
+    "repo": "zai-org/ZCode",
+    "releasesUrl": "https://github.com/zai-org/ZCode/releases",
+    "builtVersion": "3.14.3",
+    "minNode": "24.0.0",
+    "pnpm": "10.33.2"
+  },
+  "compatibility": {
+    "adaptedVersions": [
+      "3.14.3"
+    ],
+    "note": "适配矩阵以「网关契约 + 启动契约自检」为准；上游 3.x 小版本升级通常无需改动网关。"
+  },
+  "images": {
+    "base": "ghcr.io/<your-org>/zcode-docker",
+    "tags": [
+      "latest",
+      "0.1.0",
+      "zcode-3.14.3"
+    ]
+  },
+  "volumes": {
+    "data": "/root/.zcode",
+    "workspace": "/workspace",
+    "snapshots": "/root/.zcode-snapshots",
+    "browser": "/root/.config/chromium"
+  },
+  "ports": {
+    "proxy": 3080,
+    "zcode": 3030,
+    "vnc": 6080
+  }
+}

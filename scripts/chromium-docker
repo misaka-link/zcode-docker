@@ -1,0 +1,14 @@
+#!/bin/sh
+# Chromium container launcher wrapper
+# 在容器内以非特权用户/无沙箱方式启动 Chromium（Xvfb 虚拟显示之上）
+exec /usr/bin/chromium \
+  --no-sandbox \
+  --disable-dev-shm-usage \
+  --disable-gpu \
+  --disable-software-rasterizer \
+  --disable-background-networking \
+  --disable-default-apps \
+  --no-first-run \
+  --no-default-browser-check \
+  --password-store=basic \
+  "$@"

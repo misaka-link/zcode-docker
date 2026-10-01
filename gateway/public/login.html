@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f8fafc" />
+  <title>ZCode - 访问验证</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at 50% 15%, #f1f5f9 0%, #f8fafc 50%, #e2e8f0 100%);
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #679efe;
+      --primary-hover: #5686fe;
+      --primary-active: #4176e6;
+      --danger: #ef4444;
+      --danger-bg: #fef2f2;
+      --danger-border: #fecaca;
+      --radius-card: 16px;
+      --radius-input: 10px;
+      --shadow-card: 0 20px 30px -10px rgba(15, 23, 42, 0.08), 0 10px 15px -3px rgba(15, 23, 42, 0.04);
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 移动端基线：禁止 iOS 横屏文字自动膨胀 */
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      padding: 24px 16px;
+    }
+
+    .auth-container {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .auth-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      padding: 36px 32px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease;
+    }
+
+    .brand-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .brand-logo {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 14px;
+      display: block;
+      object-fit: contain;
+    }
+
+    .brand-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+    }
+
+    .brand-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .alert {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: var(--radius-input);
+      font-size: 13px;
+      margin-bottom: 20px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .alert-error {
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      color: var(--danger);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-group {
+      margin-bottom: 22px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .form-input {
+      width: 100%;
+      height: 46px;
+      padding: 0 14px 0 42px;
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius-input);
+      /* ≥16px：避免 iOS Safari 聚焦输入框时自动放大整个页面 */
+      font-size: 16px;
+      color: var(--text-main);
+      background: #ffffff;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .form-input::placeholder {
+      color: #94a3b8;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(103, 158, 254, 0.2);
+    }
+
+    .submit-btn {
+      width: 100%;
+      height: 46px;
+      background: var(--primary);
+      border: none;
+      border-radius: var(--radius-input);
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: var(--transition);
+      box-shadow: 0 4px 12px rgba(103, 158, 254, 0.35);
+    }
+
+    .submit-btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(103, 158, 254, 0.45);
+    }
+
+    .submit-btn:active {
+      background: var(--primary-active);
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(103, 158, 254, 0.25);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #ffffff;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .shake {
+      animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+      40%, 60% { transform: translate3d(3px, 0, 0); }
+    }
+
+    .footer-text {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(226, 232, 240, 0.6);
+      border-radius: 20px;
+      font-weight: 500;
+      color: #475569;
+    }
+
+    /* ===== 移动端适配 ===== */
+    @media (max-width: 520px) {
+      body { padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0px)); }
+      .auth-card { padding: 26px 20px; border-radius: 14px; }
+      .brand-title { font-size: 20px; }
+      .footer-text { margin-top: 18px; }
+    }
+
+    @media (max-width: 360px) {
+      body { padding: 12px 10px calc(12px + env(safe-area-inset-bottom, 0px)); }
+      .auth-card { padding: 22px 15px; }
+      .brand-logo { width: 40px; height: 40px; margin-bottom: 10px; }
+      .brand-title { font-size: 18px; }
+    }
+
+    /* 横屏 / 矮屏：垂直居中会把内容顶出视口，改为顶部对齐并压缩留白 */
+    @media (max-height: 620px) {
+      body { justify-content: flex-start; }
+      .auth-card { padding-top: 22px; padding-bottom: 22px; }
+      .brand-header { margin-bottom: 18px; }
+      .brand-logo { width: 36px; height: 36px; margin-bottom: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card" id="authCard">
+      <div class="brand-header">
+        <img src="/favicon.svg" class="brand-logo" alt="ZCode" />
+        <h1 class="brand-title">ZCode</h1>
+        <p class="brand-subtitle">请输入认证码以访问工作空间与容器桌面</p>
+      </div>
+
+      <div class="alert alert-error" id="errorAlert">
+        <svg style="width:18px;height:18px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="errorMessage">认证码错误，请重新输入</span>
+      </div>
+
+      <form id="authForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </span>
+            <input
+              type="password"
+              id="tokenInput"
+              class="form-input"
+              aria-label="访问认证码 (Access Code)"
+              placeholder="请输入环境变量配置的 AUTH_TOKEN"
+              required
+              autocomplete="current-password"
+              autofocus
+            />
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <span class="spinner" id="btnSpinner"></span>
+          <span id="btnText">进入工作区</span>
+        </button>
+      </form>
+    </div>
+
+    <div class="footer-text">
+      <div class="footer-badge">
+        <span>●</span>
+        <span>ZCode 网关</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    function getSafeRedirect(raw) {
+      if (!raw || typeof raw !== 'string') return '/';
+      try {
+        // 使用 WHATWG URL 严格限定 origin 必须与当前站点完全一致，彻底杜绝 //, /\\, \\t 等解析旁路
+        const parsed = new URL(raw, window.location.origin);
+        if (parsed.origin !== window.location.origin) {
+          return '/';
+        }
+        const path = parsed.pathname + parsed.search + parsed.hash;
+        if (!path.startsWith('/') || path.startsWith('//') || path.startsWith('/\\') || /[\x00-\x1f\s]/.test(path)) {
+          return '/';
+        }
+        return path;
+      } catch {
+        return '/';
+      }
+    }
+    const redirectUrl = getSafeRedirect(urlParams.get('redirect'));
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const token = document.getElementById('tokenInput').value.trim();
+      const errorAlert = document.getElementById('errorAlert');
+      const errorMessage = document.getElementById('errorMessage');
+      const authCard = document.getElementById('authCard');
+      const submitBtn = document.getElementById('submitBtn');
+      const btnSpinner = document.getElementById('btnSpinner');
+      const btnText = document.getElementById('btnText');
+
+      if (!token) return;
+
+      errorAlert.style.display = 'none';
+      submitBtn.disabled = true;
+      btnSpinner.style.display = 'inline-block';
+      btnText.textContent = '正在验证...';
+
+      try {
+        const res = await fetch('/__auth/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+          signal: AbortSignal.timeout(15000)
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+          btnText.textContent = '验证通过，正在跳转...';
+          setTimeout(() => {
+            window.location.href = redirectUrl;
+          }, 300);
+        } else {
+          errorMessage.textContent = data.error || '认证码无效，请重试';
+          errorAlert.style.display = 'flex';
+          authCard.classList.remove('shake');
+          void authCard.offsetWidth;
+          authCard.classList.add('shake');
+          submitBtn.disabled = false;
+          btnSpinner.style.display = 'none';
+          btnText.textContent = '进入工作区';
+          document.getElementById('tokenInput').focus();
+        }
+      } catch (err) {
+        errorMessage.textContent = '网络连接异常，请检查网关服务';
+        errorAlert.style.display = 'flex';
+        submitBtn.disabled = false;
+        btnSpinner.style.display = 'none';
+        btnText.textContent = '进入工作区';
+      }
+    }
+  </script>
+</body>
+</html>

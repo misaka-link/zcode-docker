@@ -1,0 +1,48 @@
+# ========================================================
+# .dockerignore —— 控制构建上下文
+# ========================================================
+
+# 版本控制与 CI
+.git
+.github
+.gitignore
+
+# 上游源码与外部依赖（约 129MB，严格禁止进入构建上下文）
+.upstream/
+.upstream/**
+
+# 敏感文件（绝不进镜像）
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# 运行时数据卷、本地工作区与临时目录
+data/
+workspace/
+tmp/
+.zcode/
+.zcode-snapshots/
+
+# 依赖目录（镜像内重新安装）
+**/node_modules
+**/node_modules/**
+
+# 项目文档与截图（保留根目录 README.md）
+doc/
+*.md
+!README.md
+
+# 日志与缓存
+*.log
+.cache/
+__pycache__/
+*.py[cod]
+
+# 系统与 IDE 杂项
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

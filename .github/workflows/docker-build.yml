@@ -1,0 +1,116 @@
+name: Build and Publish ZCode Docker Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      push_image:
+        description: '是否推送镜像至 GHCR (true/false)'
+        required: false
+        default: 'false'
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+      - '[0-9]*.[0-9]*.[0-9]*'
+    paths:
+      - 'Dockerfile'
+      - 'build.sh'
+      - 'docker-compose.yml'
+      - 'version.json'
+      - 'gateway/**'
+      - 'scripts/**'
+      - '.github/workflows/docker-build.yml'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-smoke-test:
+    name: Build & Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Build Docker Image
+        run: |
+          chmod +x ./build.sh
+          ./build.sh --china-mirror=0
+
+      - name: Smoke Test Container
+        run: |
+          set -euo pipefail
+          docker run -d --name zcode-smoke -p 13080:3080 \
+            -e AUTH_TOKEN=smoke-test-token \
+            -e PROXY_PORT=3080 \
+            zcode-docker:latest
+
+          ok=0
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:13080/healthz >/tmp/healthz.json 2>/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 3
+          done
+
+          echo "--- /healthz 响应结果 ---"
+          cat /tmp/healthz.json || true
+          echo ""
+
+          docker logs zcode-smoke | tail -40 || true
+          docker rm -f zcode-smoke >/dev/null 2>&1 || true
+
+          [ "$ok" = "1" ] || { echo "冒烟测试失败: /healthz 未就绪"; exit 1; }
+          grep -q '"ok":true' /tmp/healthz.json
+          echo "冒烟测试通过: 统一网关与核心服务健康检查正常"
+
+      - name: Check GHCR Push Eligibility
+        id: check_push
+        run: |
+          SHOULD_PUSH="false"
+          if [ "${{ github.repository_owner }}" != "" ] && [ "${{ secrets.GITHUB_TOKEN }}" != "" ]; then
+            if [ "${{ github.event_name }}" = "push" ]; then
+              SHOULD_PUSH="true"
+            elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.push_image }}" = "true" ]; then
+              SHOULD_PUSH="true"
+            fi
+          fi
+          echo "should_push=${SHOULD_PUSH}" >> $GITHUB_OUTPUT
+
+      - name: Log in to GitHub Container Registry
+        if: steps.check_push.outputs.should_push == 'true' && github.actor != ''
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag and Push Docker Images
+        if: steps.check_push.outputs.should_push == 'true' && github.actor != ''
+        run: |
+          set -euo pipefail
+          OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+          REGISTRY_IMAGE="ghcr.io/${OWNER}/zcode-docker"
+
+          PROJ_VER=$(node -e "try{const v=require('./version.json');process.stdout.write(String(v.version||'0.1.0'))}catch(e){process.stdout.write('0.1.0')}" 2>/dev/null || echo "0.1.0")
+          CORE_VER=$(node -e "try{const v=require('./version.json');process.stdout.write(String((v.core&&v.core.builtVersion)||'3.14.3'))}catch(e){process.stdout.write('3.14.3')}" 2>/dev/null || echo "3.14.3")
+
+          docker tag zcode-docker:latest "${REGISTRY_IMAGE}:latest"
+          docker tag zcode-docker:latest "${REGISTRY_IMAGE}:${PROJ_VER}"
+          docker tag zcode-docker:latest "${REGISTRY_IMAGE}:v${PROJ_VER}"
+          docker tag zcode-docker:latest "${REGISTRY_IMAGE}:zcode-${CORE_VER}"
+          docker tag zcode-docker:latest "${REGISTRY_IMAGE}:${CORE_VER}"
+
+          echo "推送镜像标签到 ${REGISTRY_IMAGE}..."
+          docker push "${REGISTRY_IMAGE}:latest"
+          docker push "${REGISTRY_IMAGE}:${PROJ_VER}"
+          docker push "${REGISTRY_IMAGE}:v${PROJ_VER}"
+          docker push "${REGISTRY_IMAGE}:zcode-${CORE_VER}"
+          docker push "${REGISTRY_IMAGE}:${CORE_VER}"
+          echo "镜像发布完成"
