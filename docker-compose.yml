@@ -1,6 +1,9 @@
 services:
   zcode:
-    image: zcode-docker:latest
+    # 默认使用已发布的 GHCR 镜像：`docker compose up -d` 会自动拉取，无需本地构建。
+    # 想用本地构建的镜像：执行 `./build.sh`（默认打同样的 ghcr.io/misaka-link/zcode-docker 标签），
+    # 或在 .env 里设置 ZCODE_IMAGE=zcode-docker:latest。
+    image: ${ZCODE_IMAGE:-ghcr.io/misaka-link/zcode-docker:latest}
     container_name: zcode
     restart: unless-stopped
     ports:

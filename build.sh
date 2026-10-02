@@ -14,7 +14,7 @@ set -eo pipefail
 #   -h, --help              查看帮助
 # ========================================================
 
-IMAGE_NAME="zcode-docker"
+IMAGE_NAME="${IMAGE_NAME:-ghcr.io/misaka-link/zcode-docker}"
 NODE_IMAGE="${NODE_IMAGE:-node:24-trixie}"
 ZCODE_REF="${ZCODE_REF:-v3.14.3}"
 ZCODE_DIST_URL="${ZCODE_DIST_URL:-}"

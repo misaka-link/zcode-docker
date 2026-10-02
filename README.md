@@ -2,9 +2,15 @@
 
 > 面向 [ZCode](https://github.com/zai-org/ZCode)（Z.ai 出品的 AI 编程工作台）的**开箱即用容器化套件**。
 > 一个端口、一套口令，同时提供 **Web 工作区 / Web 控制台 / noVNC 虚拟桌面** 三入口。
+
+> 🔗 **快速直达**
+> - 📦 **已发布镜像**：`ghcr.io/misaka-link/zcode-docker:latest`（[GHCR 包页](https://github.com/misaka-link/zcode-docker/pkgs/container/zcode-docker)）
+> - 🚀 **本项目仓库**：[misaka-link/zcode-docker](https://github.com/misaka-link/zcode-docker) ｜ [Releases](https://github.com/misaka-link/zcode-docker/releases) ｜ [Actions](https://github.com/misaka-link/zcode-docker/actions)
+> - ⚡ **上游 ZCode**：[zai-org/ZCode](https://github.com/zai-org/ZCode)
 >
 > 本项目的控制台、登录认证、初始化向导与快照备份能力，继承自同源项目
-> [`deepseek-harness-docker`](../deepseek-harness-docker)，把被封装的核心从 DeepSeek Harness 换成 ZCode。
+> [misaka-link/deepseek-harness-docker](https://github.com/misaka-link/deepseek-harness-docker)，
+> 把被封装的核心从 DeepSeek Harness 换成 ZCode。
 
 ---
 
@@ -50,53 +56,92 @@
 
 ### 3.1 环境要求
 - Docker Engine 24+（含 BuildKit）、Docker Compose v2+
-- 构建镜像需要能访问 GitHub 与 npm 源；内存建议 ≥ 4 GB
+- **直接使用预构建镜像**：只要 Docker，无需源码、无需构建（推荐）
+- **从源码构建镜像**：需能访问 GitHub 与 npm 源，内存建议 ≥ 4 GB
 
-### 3.2 一键启动
-
-```bash
-cp .env.example .env          # 可选：改 PROXY_PORT / AUTH_TOKEN；留空则首次访问进初始化向导
-./build.sh                    # 构建镜像（国内默认走镜像加速）
-docker compose up -d
-docker compose logs -f
-```
-
-访问：
-
-| 入口 | 地址 |
-|---|---|
-| Web 工作区 | `http://<服务器IP>:3080/` |
-| Web 控制台 | `http://<服务器IP>:3080/admin/` |
-| 虚拟桌面（noVNC） | `http://<服务器IP>:3080/vnc/` |
-
-### 3.3 单行 docker run（等价的 compose 替代）
+### 3.2 单行命令极速启动（推荐，直接拉取已发布镜像）
 
 ```bash
-docker run -d --name zcode --restart unless-stopped -p 3080:3080 \
+docker run -d \
+  --name zcode \
+  --restart unless-stopped \
+  -p 3080:3080 \
   -e AUTH_TOKEN=your-strong-token \
   -v $(pwd)/data/zcode:/root/.zcode \
   -v $(pwd)/workspace:/workspace \
   -v $(pwd)/data/snapshots:/root/.zcode-snapshots \
   -v $(pwd)/data/browser:/root/.config/chromium \
-  zcode-docker:latest
+  ghcr.io/misaka-link/zcode-docker:latest
 ```
 
-### 3.4 常驻编排部署（推荐，已在服务器实测）
+> `AUTH_TOKEN` 也可以留空：首次访问会自动进入「初始化访问口令」向导，设置后以 `0600` 持久化到数据卷。
+
+**镜像标签**（同一镜像多标签，便于精确锁定）：
+
+| 标签 | 含义 |
+|---|---|
+| `ghcr.io/misaka-link/zcode-docker:latest` | 最新构建（推荐） |
+| `ghcr.io/misaka-link/zcode-docker:0.1.0` / `:v0.1.0` | 套件工程版本 |
+| `ghcr.io/misaka-link/zcode-docker:zcode-3.14.3` / `:3.14.3` | 内置 ZCode 运行时版本 |
+
+启动后访问：
+
+| 入口 | 地址 |
+|---|---|
+| Web 工作区（ZCode） | `http://<服务器IP>:3080/` |
+| 管理控制台 | `http://<服务器IP>:3080/admin/` |
+| 虚拟桌面（noVNC） | `http://<服务器IP>:3080/vnc/` |
+
+### 3.3 Docker 容器编排（docker-compose）
 
 ```bash
-cd /path/to/zcode-docker
-cp .env.example .env                       # 至少设置 AUTH_TOKEN 与 PROXY_PORT
+mkdir -p zcode-docker && cd zcode-docker
+curl -fsSLO https://raw.githubusercontent.com/misaka-link/zcode-docker/main/docker-compose.yml
+curl -fsSL  https://raw.githubusercontent.com/misaka-link/zcode-docker/main/.env.example -o .env
 mkdir -p data/zcode data/snapshots data/browser workspace
-docker compose up -d                       # 编排启动（restart: unless-stopped，开机自启）
-docker compose ps                          # 应显示 (healthy)
-bash scripts/remote-compose-verify.sh 3080 "<你的AUTH_TOKEN>"   # 编排验收：19 项
+docker compose up -d          # 自动拉取 GHCR 镜像并启动
+docker compose ps             # 应显示 (healthy)
+docker compose logs -f
+```
+
+`docker-compose.yml` 关键内容：
+
+```yaml
+services:
+  zcode:
+    image: ghcr.io/misaka-link/zcode-docker:latest   # 也可用 :0.1.0 / :zcode-3.14.3 锁定
+    container_name: zcode
+    restart: unless-stopped
+    ports:
+      - "${PROXY_PORT:-3080}:${PROXY_PORT:-3080}"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}                   # 留空 → 首次访问进初始化向导
+      - PROXY_PORT=${PROXY_PORT:-3080}
+      - ZCODE_DESKTOP_ENABLED=${ZCODE_DESKTOP_ENABLED:-1}
+      - ZCODE_DESKTOP_MODE=${ZCODE_DESKTOP_MODE:-browser}
+    volumes:
+      - ./data/zcode:/root/.zcode
+      - ./workspace:/workspace
+      - ./data/snapshots:/root/.zcode-snapshots
+      - ./data/browser:/root/.config/chromium
 ```
 
 要点：
 - `PROXY_PORT` 同时决定 **宿主映射端口** 与 **容器内监听端口**，改一处即可（避免映射错位）。
 - 数据落在 `./data/*` 与 `./workspace`，容器重建/升级镜像不丢数据。
 - 容器内置 `HEALTHCHECK`（`/healthz`），`docker compose ps` 直接可见健康状态。
-- 升级：`docker compose pull`（若用远程镜像）或重新 `./build.sh` 后 `docker compose up -d`。
+- 升级：`docker compose pull && docker compose up -d`。
+- 想用**本地构建**的镜像：先 `./build.sh`（默认打 `ghcr.io/misaka-link/zcode-docker` 标签，compose 直接复用），
+  或在 `.env` 里设置 `ZCODE_IMAGE=zcode-docker:latest`。
+
+### 3.4 从源码构建镜像（可选）
+
+```bash
+git clone https://github.com/misaka-link/zcode-docker.git && cd zcode-docker
+./build.sh                    # 默认走国内镜像源加速；海外构建用 ./build.sh --china-mirror=0
+# 常用参数：--no-cache / --with-desktop-client / --dist-url <预构建发行包URL> / --ref v3.14.3
+docker compose up -d
+```
 
 ---
 
