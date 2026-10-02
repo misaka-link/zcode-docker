@@ -7,7 +7,7 @@ import readline from 'node:readline';
 import { TOOLS, executeTool } from './tools.mjs';
 
 const SERVER_NAME = 'zcode-browser-desktop';
-const SERVER_VERSION = '1.0.0';
+const SERVER_VERSION = '1.0.1';
 const MCP_PROTOCOL_VERSION = '2024-11-05';
 
 function printHelp() {

@@ -17,7 +17,7 @@
         "en": "Container browser & virtual desktop control for ZCode: drive the in-container Chromium via MCP tools.",
         "zh-CN": "ZCode 容器浏览器与虚拟桌面控制：通过 MCP 工具驱动容器内 Chromium（打开网页、截屏、点击、输入、等待）。"
       },
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "zcode-docker"
       }

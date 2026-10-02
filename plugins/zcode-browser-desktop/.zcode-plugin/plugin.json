@@ -1,6 +1,6 @@
 {
   "name": "zcode-browser-desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "容器 Chromium 图形浏览器与桌面集成插件，支持网页浏览、元素点击、文字输入、无损截屏及桌面状态查询",
   "author": {
     "name": "ZCode Team"
