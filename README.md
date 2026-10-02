@@ -1,16 +1,59 @@
 # zcode-docker
 
-> 面向 [ZCode](https://github.com/zai-org/ZCode)（Z.ai 出品的 AI 编程工作台）的**开箱即用容器化套件**。
-> 一个端口、一套口令，同时提供 **Web 工作区 / Web 控制台 / noVNC 虚拟桌面** 三入口。
+> 📌 **版本信息**：内置官方 ZCode 核心 `3.14.3` ｜ 本项目工程版本 `0.1.0`
+> 🔗 **快速直达链接**：
+> - ⚡ **官方 ZCode 仓库**：[zai-org/ZCode](https://github.com/zai-org/ZCode) ｜ [官方 Releases](https://github.com/zai-org/ZCode/releases)
+> - 📦 **本项目 Docker 仓库**：[misaka-link/zcode-docker](https://github.com/misaka-link/zcode-docker) ｜ [本项目 Releases](https://github.com/misaka-link/zcode-docker/releases) ｜ [GHCR 镜像包页](https://github.com/misaka-link/zcode-docker/pkgs/container/zcode-docker)
+> 🏷️ **镜像标签规范**：默认拉取镜像统一保持 **`:latest`**，开箱即用；每次构建镜像时**均会额外多打两组版本标签**：
+> 1. **内置官方 ZCode 版本标签**（如 `:zcode-3.14.3`、`:3.14.3`），精确锁定底层 ZCode 引擎；
+> 2. **本项目自身工程版本标签**（如 `:0.1.0`、`:v0.1.0`），精确锁定本容器套件自身的版本。
 
-> 🔗 **快速直达**
-> - 📦 **已发布镜像**：`ghcr.io/misaka-link/zcode-docker:latest`（[GHCR 包页](https://github.com/misaka-link/zcode-docker/pkgs/container/zcode-docker)）
-> - 🚀 **本项目仓库**：[misaka-link/zcode-docker](https://github.com/misaka-link/zcode-docker) ｜ [Releases](https://github.com/misaka-link/zcode-docker/releases) ｜ [Actions](https://github.com/misaka-link/zcode-docker/actions)
-> - ⚡ **上游 ZCode**：[zai-org/ZCode](https://github.com/zai-org/ZCode)
->
-> 本项目的控制台、登录认证、初始化向导与快照备份能力，继承自同源项目
-> [misaka-link/deepseek-harness-docker](https://github.com/misaka-link/deepseek-harness-docker)，
-> 把被封装的核心从 DeepSeek Harness 换成 ZCode。
+面向官方 [ZCode](https://github.com/zai-org/ZCode)（Z.ai 出品的 AI 编程工作台）打造的**开箱即用容器化套件与可视化 Web Admin 控制台**。基于 **Debian Trixie & Node 24** 现代运行时底座，**一个端口**同时提供 **ZCode Web 工作区 / Web 管理控制台 / noVNC 虚拟桌面** 三入口；内置轻量访问认证与初始化向导、配置快照与一键还原、ZCode 运行时多版本在线热切换、容器内真实 Chromium 桌面与 AI 浏览器插件。
+
+简单来说：**单端口三入口，自带强大 Admin 控制台，Docker 一键梭哈，开箱即用。**
+
+---
+
+## 🎛️ 核心亮点：强大好用的 Web Admin 控制台展示
+
+本项目核心特色在于内置了功能完备、极简美观的 Web 管理控制台（访问 `/admin/` 即可进入）：
+
+| 1. ZCode 运行时与版本管理看板 | 2. 顶栏容器套件更新速览 |
+| :---: | :---: |
+| ![版本管理](doc/03-admin-tab-versions.png) | ![版本速览](doc/08-admin-version-popover.png) |
+| 实时呈现当前运行时版本、探活状态、端口与 PID，并在「本地已缓存版本 / 远端可下载版本」之间一键安装与切换；切换前自动就地回滚点 | 点击顶栏版本徽章弹出更新速览卡片，展示本地/远端版本、运行时版本库缓存、当前版本更新内容与官方 Release 直达 |
+
+| 3. 原生插件管理 | 4. 浏览器与虚拟桌面控制 |
+| :---: | :---: |
+| ![插件管理](doc/04-admin-tab-plugins.png) | ![桌面控制](doc/05-admin-tab-desktop.png) |
+| 直接驱动 `zcode plugins list/install/enable/disable/uninstall`；自带 `zcode-browser-desktop` 原生插件，安装后即出现在列表 | 浏览器/客户端两种桌面模式、1080p/2K 分辨率、空闲自动休眠、CDP 9222 远程调试开关、AI 截图默认画质与保存目录 |
+
+| 5. 配置快照与一键备份还原 | 6. 网关与系统安全配置 |
+| :---: | :---: |
+| ![快照备份](doc/06-admin-tab-snapshots.png) | ![系统配置](doc/07-admin-tab-settings.png) |
+| 一键生成 `/root/.zcode` 全量快照，支持还原（仅配置 / 完整全量）、下载归档、导入外部快照与单槽位就地回滚点 | 热修改访问认证码、自定义后台与桌面路径、反向代理信任、WebSocket 同源白名单，改完自动重启网关生效 |
+
+| 7. 极简访问认证页 | 8. 官方 ZCode Web 交互工作区 |
+| :---: | :---: |
+| ![登录界面](doc/01-login.png) | ![ZCode Web](doc/10-zcode-web.png) |
+| 告别原生丑陋 Basic Auth 弹窗，ZCode 同源灰白科技质感，单输入框极速登录；留空口令则首次访问进初始化向导 | 彻底打通容器内回环限制，浏览器直接使用完整 ZCode 工作台：任务会话、项目、插件市场与内置模型一应俱全 |
+
+| 9. 容器内置真实 Chromium noVNC 桌面 (`/vnc/`) | 10. 控制台顶栏与三入口直达 |
+| :---: | :---: |
+| ![VNC 桌面](doc/09-vnc-desktop.png) | ![控制台顶栏](doc/02-admin-topbar.png) |
+| Xvfb + x11vnc + websockify 静态版本化隔离；**默认打开干净空白页**，可用 `ZCODE_DESKTOP_START_URL` 指定 ZCode Web 或任意网址，也可切换为 ZCode 官方 Electron 客户端 | 顶栏常驻「本项目 / ZCode 官方」仓库直达、「进入工作区」「打开桌面 (VNC)」与退出登录，一个口令贯通三入口 |
+
+---
+
+## 📦 镜像版本选择与标签说明
+
+直接使用已发布的预构建镜像即可，**无需源码、无需构建**。所有标签指向同一镜像，按需选择：
+
+| 标签 | 含义 |
+| --- | --- |
+| `ghcr.io/misaka-link/zcode-docker:latest` | **最新构建（推荐）** |
+| `ghcr.io/misaka-link/zcode-docker:0.1.0` / `:v0.1.0` | 本项目工程版本标签，精确锁定套件版本 |
+| `ghcr.io/misaka-link/zcode-docker:zcode-3.14.3` / `:3.14.3` | 内置 ZCode 官方引擎版本标签，精确锁定底层运行时 |
 
 ---
 
@@ -38,14 +81,7 @@ docker run -d \
 ```
 
 > `AUTH_TOKEN` 也可以留空：首次访问会自动进入「初始化访问口令」向导，设置后以 `0600` 持久化到数据卷。
-
-**镜像标签**（同一镜像多标签，便于精确锁定）：
-
-| 标签 | 含义 |
-|---|---|
-| `ghcr.io/misaka-link/zcode-docker:latest` | 最新构建（推荐） |
-| `ghcr.io/misaka-link/zcode-docker:0.1.0` / `:v0.1.0` | 套件工程版本 |
-| `ghcr.io/misaka-link/zcode-docker:zcode-3.14.3` / `:3.14.3` | 内置 ZCode 运行时版本 |
+> 想锁定版本，把末尾标签换成 `:0.1.0`（套件版本）或 `:zcode-3.14.3`（内置 ZCode 版本）即可。
 
 ### 3. Docker 容器编排（docker-compose）
 
@@ -167,10 +203,10 @@ cp .env.example .env
 vi .env        # 至少设置 AUTH_TOKEN；端口 / 工作区 / 桌面等按需修改
 ```
 
-`.env` 常用配置项（**完整清单见 [`.env.example`](.env.example) 与 [`doc/api-contract.md`](doc/api-contract.md) §2**）：
+`.env` 常用配置项（**完整清单见 [`.env.example`](.env.example)**）：
 
 | 配置项 | 默认值 | 说明 |
-|---|---|---|
+| --- | --- | --- |
 | `AUTH_TOKEN` | *空* | 统一访问口令（Web / 控制台 / VNC 共用）；留空 → 首次访问进初始化向导 |
 | `PROXY_PORT` | `3080` | 唯一对外端口（宿主映射与容器内监听同值） |
 | `ZCODE_WORKSPACE` | `/workspace` | AI 编程工作区目录 |
@@ -188,11 +224,11 @@ vi .env        # 至少设置 AUTH_TOKEN；端口 / 工作区 / 桌面等按需�
 
 ### 5. 启动后访问
 
-| 入口 | 地址 |
-|---|---|
-| Web 工作区（ZCode） | `http://<服务器IP>:3080/` |
-| 管理控制台 | `http://<服务器IP>:3080/admin/` |
-| 虚拟桌面（noVNC） | `http://<服务器IP>:3080/vnc/` |
+| 入口 | 地址 | 说明 |
+| :--- | :--- | :--- |
+| **Web 工作区（ZCode）** | `http://<服务器IP>:3080/` | 完整 ZCode 工作台 |
+| **管理控制台** ⭐ | `http://<服务器IP>:3080/admin/` | 版本 / 插件 / 桌面 / 快照 / 设置五大面板 |
+| **虚拟桌面（noVNC）** | `http://<服务器IP>:3080/vnc/` | 容器内 Chromium 桌面，默认空白页 |
 
 ### 6. 从源码构建镜像（可选）
 
@@ -205,21 +241,52 @@ docker compose up -d
 
 ---
 
-## 1. 它是什么
+## ⚙️ 常见环境变量
 
-| 能力 | 说明 |
-|---|---|
-| 🖥️ **ZCode Web 工作区** | 上游 ZCode 的浏览器界面（`zcode --web`），由容器内 `zcode-manager` 守护与探活 |
-| 🎛️ **Web 控制台** | 版本管理（安装/切换/回滚）、插件、桌面、快照、系统设置五大面板 |
-| 🪟 **noVNC 虚拟桌面** | Xvfb + x11vnc + noVNC，桌面里默认用 **Chromium 打开空白页**（`ZCODE_DESKTOP_START_URL` 可改为 ZCode Web 或任意网址）；也可切换为 **ZCode Electron 客户端** |
-| 🔐 **统一认证** | 单口令保护全部入口；口令留空时首次访问进入「初始化向导」，凭据以 `0600` 持久化 |
-| 📦 **快照与备份** | 配置快照的创建/列表/探测/下载/导入/还原（支持「仅配置」与「完整全量」两种范围） |
-| 🔄 **版本热切换** | 多版本运行时库 + 原子置换 + 单槽位回滚 + 中断自愈（`ZCODE_DIST_URL` 可选） |
-| 🧩 **原生插件** | 直接驱动 `zcode plugins list/install/enable/disable/uninstall/update`；套件自带 **ZCode 原生浏览器插件**（见 §9） |
+| 变量名 | 默认值 | 说明 |
+| --- | --- | --- |
+| `AUTH_TOKEN` | *空* | 统一访问口令；留空则首次访问进入初始化向导并持久化 |
+| `PROXY_PORT` | `3080` | 唯一对外端口（Web、控制台与 VNC 共用） |
+| `ADMIN_PATH` / `VNC_PATH` | `/admin` / `/vnc` | 管理后台与图形桌面访问路径 |
+| `ZCODE_HOME` | `/root` | 运行根目录（非 root 部署可改 `/home/zcode`） |
+| `ZCODE_WORKSPACE` | `/workspace` | AI 默认工作区目录 |
+| `ZCODE_BROWSE_ROOT` | `/workspace` | 「添加项目」目录浏览器默认起始目录 |
+| `ZCODE_DESKTOP_ENABLED` | `1` | 是否启用虚拟桌面（`1` 开启 / `0` 关闭） |
+| `ZCODE_DESKTOP_MODE` | `browser` | 桌面模式：`browser`（容器 Chromium）/ `client`（Electron 客户端） |
+| `ZCODE_DESKTOP_START_URL` | *空* | 桌面起始地址：空=`about:blank`、`zcode`=容器内 ZCode Web、`http(s)://…`=指定网址 |
+| `ZCODE_DESKTOP_WIDTH` / `ZCODE_DESKTOP_HEIGHT` | `1920` / `1080` | 桌面分辨率（控制台可动态调整） |
+| `ZCODE_IDLE_TIMEOUT_MINUTES` | `30` | 桌面空闲自动休眠（`0` 为不休眠） |
+| `ZCODE_ENABLE_CDP` / `ZCODE_CDP_PORT` | `1` / `9222` | 容器 Chromium 远程调试开关与端口 |
+| `ZCODE_SCREENSHOT_QUALITY` / `ZCODE_SCREENSHOT_DIR` | `high` / *空* | AI 截图默认画质与保存子目录 |
+| `ZCODE_DIST_URL` | *空* | 运行时版本在线下载基址；留空则禁用在线安装（只读当前版本） |
+| `ZCODE_VERSIONS_MIN_FREE_MB` | `1536` | 版本切换前磁盘可用空间水位要求 |
+| `ZCODE_INTERNAL_TOKEN` | `0` | `1` 时网关为上游注入内部令牌（`?token=` + `zcode_lite_token` Cookie） |
+| `TRUST_PROXY` / `PUBLIC_HOST` | `0` / *空* | 反向代理信任与 WebSocket 同源白名单 |
+| `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` / `NO_PROXY` | *空* | 出站网络代理（自动大小写归一化） |
 
 ---
 
-## 2. 架构
+## 🧩 自带插件：`zcode-browser-desktop`（ZCode 原生）
+
+把容器浏览器与虚拟桌面能力封装为 **ZCode 原生插件**（MCP 工具 + Skill，零第三方依赖），
+Agent 可直接调用：`browser_status` / `browser_open` / `browser_screenshot` / `browser_click` / `browser_type` / `browser_wait`。
+
+```bash
+# 1) 校验插件清单（ZCode 原生规范）
+bash scripts/validate-browser-plugin.sh
+
+# 2) 安装到运行中的容器（本地目录市场）
+docker exec zcode node /opt/zcode/bin/zcode.mjs plugins marketplace add /path/to/plugins --scope user
+docker exec zcode node /opt/zcode/bin/zcode.mjs plugins install zcode-browser-desktop@zcode-docker-local
+docker exec zcode node /opt/zcode/bin/zcode.mjs plugins list --json
+```
+
+安装后即可在控制台「插件管理」页看到 `zcode-browser-desktop`（状态：已启用）。
+详见 [`plugins/zcode-browser-desktop/README.md`](plugins/zcode-browser-desktop/README.md)。
+
+---
+
+## 🏗️ 架构与数据卷
 
 ```
                         宿主机 :3080（唯一暴露端口）
@@ -234,195 +301,64 @@ docker compose up -d
         └───┬──────────────────────┬───────────────────┬──────┘
             │                      │                   │
    ZCode Web (3030)         控制台 API / 静态      虚拟桌面 :99
-   zcode-manager 守护       快照 / 版本 / 插件      ├─ browser：Chromium → ZCode Web
+   zcode-manager 守护       快照 / 版本 / 插件      ├─ browser：Chromium
    （探活 + 自愈 + 日志）                          └─ client ：ZCode Electron 客户端
-
-   卷：/root/.zcode（数据） /root/.zcode-snapshots（快照+版本库）
-       /workspace（工作区）  /root/.config/chromium（浏览器数据）
 ```
 
----
+| 数据卷 | 容器内路径 | 用途 |
+| :--- | :--- | :--- |
+| `./data/zcode` | `/root/.zcode` | ZCode 配置、会话历史与扩展状态 |
+| `./workspace` | `/workspace` | AI 工作区（生成的项目代码与文档） |
+| `./data/snapshots` | `/root/.zcode-snapshots` | 配置快照与多版本运行时归档 |
+| `./data/browser` | `/root/.config/chromium` | 容器 Chromium 用户数据（登录态 / Cookies） |
 
 ---
 
-## 3. 虚拟桌面的两种模式
-
-由 `ZCODE_DESKTOP_MODE` 选择，也可在控制台「桌面」页运行时切换（切换后需重启桌面生效）：
-
-| 模式 | 桌面里显示什么 | 说明 |
-|---|---|---|
-| `browser`（默认） | 容器内 **Chromium**，**默认打开空白页 `about:blank`** | 起始地址由 `ZCODE_DESKTOP_START_URL` 决定（见下）；默认开启 CDP（9222）便于自动化 |
-| `client` | **ZCode Electron 桌面客户端** | 需镜像以 `--with-desktop-client` 构建（额外数百 MB），或设置 `ZCODE_CLIENT_BIN` 指向已有客户端 |
-
-`ZCODE_DESKTOP_START_URL` 取值规则（`browser` 模式）：
-
-| 取值 | 效果 |
-|---|---|
-| 空 / 未设置 / `about:blank` | 打开干净空白页（**默认，不会自动打开 ZCode Web**） |
-| `zcode` / `zcode-web` | 打开容器内 ZCode Web（`http://127.0.0.1:3030/`，启用内部令牌时自动带 `?token=`） |
-| `http(s)://...` | 打开指定网址 |
-
-其余桌面能力：分辨率热切换（`ZCODE_DESKTOP_WIDTH/HEIGHT`）、空闲休眠（`ZCODE_IDLE_TIMEOUT_MINUTES`，0=常驻）、
-CDP 开关与端口（`ZCODE_ENABLE_CDP` / `ZCODE_CDP_PORT`）、kiosk 全屏（`ZCODE_DESKTOP_KIOSK=1`，仅对非空白起始地址生效）、
-AI 截图默认画质与目录。
-
-> 「添加项目」的目录浏览器默认起始目录由 `ZCODE_BROWSE_ROOT` 控制（默认 `/workspace`），
-> 实现方式见 [`scripts/patch-zcode-runtime.mjs`](scripts/patch-zcode-runtime.mjs)（构建期给运行时打一处最小补丁，不改 `HOME`）。
-
----
-
-## 4. 环境变量
-
-完整清单见 [`.env.example`](.env.example) 与契约 [`doc/api-contract.md`](doc/api-contract.md) §2，常用项：
-
-| 变量 | 默认值 | 说明 |
-|---|---|---|
-| `AUTH_TOKEN` | *空* | 统一访问口令；留空 → 首次访问进初始化向导并持久化 |
-| `PROXY_PORT` | `3080` | 唯一对外端口（Web / 控制台 / 桌面共用） |
-| `ADMIN_PATH` / `VNC_PATH` | `/admin` / `/vnc` | 控制台与桌面路径（可在控制台热改并持久化） |
-| `ZCODE_WORKSPACE` | `/workspace` | AI 工作区 |
-| `ZCODE_HOME` | `/root` | 运行根目录（非 root 部署可改 `/home/zcode`） |
-| `ZCODE_DESKTOP_ENABLED` | `1` | 虚拟桌面总开关 |
-| `ZCODE_DESKTOP_MODE` | `browser` | `browser` \| `client` |
-| `ZCODE_DESKTOP_START_URL` | *空* | 桌面浏览器起始地址：空=`about:blank`；`zcode`=容器内 ZCode Web；`http(s)://…`=指定网址 |
-| `ZCODE_BROWSE_ROOT` | `/workspace` | ZCode Web「添加项目」目录浏览器的默认起始目录 |
-| `ZCODE_IDLE_TIMEOUT_MINUTES` | `30` | 桌面空闲休眠（0=不休眠） |
-| `ZCODE_INTERNAL_TOKEN` | `0` | `1` 时网关为上游注入内部令牌（`?token=` + `zcode_lite_token` Cookie） |
-| `ZCODE_DIST_URL` | *空* | 运行时版本下载基址；留空则禁用在线版本切换（只读当前版本） |
-| `ZCODE_VERSIONS_MIN_FREE_MB` | `1536` | 版本切换前磁盘水位 |
-| `TRUST_PROXY` / `PUBLIC_HOST` | `0` / *空* | 反代信任与 WebSocket 同源白名单 |
-| `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` / `NO_PROXY` | *空* | 出站代理（自动大小写归一化） |
-
----
-
-## 5. 数据卷
-
-| 宿主路径 | 容器内 | 内容 |
-|---|---|---|
-| `./data/zcode` | `/root/.zcode` | 配置、会话、凭据、插件状态、日志（`logs/`） |
-| `./workspace` | `/workspace` | AI 生成的项目代码与文档 |
-| `./data/snapshots` | `/root/.zcode-snapshots` | 快照归档 + `versions/` 多版本运行时库 |
-| `./data/browser` | `/root/.config/chromium` | 浏览器登录态与缓存 |
-
-> 快照默认只覆盖 `/root/.zcode`（「仅配置」排除 `logs/`、`workspace/`）；`/workspace` 属用户资产，不进入快照。
-
----
-
-## 6. 开发与验证
+## 🧪 开发与验证
 
 本仓库自带可复现的验证链路（脚本均在 [`scripts/`](scripts/)）：
 
 | 脚本 | 作用 | 需要 Docker |
-|---|---|---|
-| [`local-build-zcode.sh`](scripts/local-build-zcode.sh) | 在本机构建 ZCode 发行包（`pnpm install` + 预编译基础包 + `pnpm build:zcode`），产物落 `.build/zcode-<v>.tar.gz` | 否 |
+| :--- | :--- | :---: |
+| [`local-build-zcode.sh`](scripts/local-build-zcode.sh) | 在本机构建 ZCode 发行包，产物落 `.build/zcode-<v>.tar.gz` | 否 |
 | [`e2e-local.sh`](scripts/e2e-local.sh) | 本地等效端到端：真实网关 + 真实上游，覆盖认证/反代/控制台 API/快照全链路 | 否 |
-| [`desktop-logic-test.mjs`](scripts/desktop-logic-test.mjs) | 虚拟桌面编排逻辑（桩进程）：启动顺序、browser/client 模式、起始地址、热更新重启、回收 | 否 |
+| [`desktop-logic-test.mjs`](scripts/desktop-logic-test.mjs) | 虚拟桌面编排逻辑（桩进程）：启动顺序、browser/client 模式、起始地址、热更新重启 | 否 |
 | [`validate-browser-plugin.sh`](scripts/validate-browser-plugin.sh) | 用 ZCode CLI 校验自带插件清单 | 否 |
 | [`patch-zcode-runtime.mjs`](scripts/patch-zcode-runtime.mjs) | 构建期给运行时打最小补丁（`ZCODE_BROWSE_ROOT` 默认目录），幂等、可容忍失配 | 否 |
 
 ```bash
-# 1) 构建 ZCode 发行包（产出 .build/zcode-<version>.tar.gz）
-bash scripts/local-build-zcode.sh
-
-# 2) 本地等效 E2E（拉起真实网关与真实上游）
-bash scripts/e2e-local.sh
-
-# 3) 桌面编排逻辑测试（桩进程，无需 X 服务器）
-node scripts/desktop-logic-test.mjs
-
-# 4) 插件清单校验
+bash scripts/local-build-zcode.sh     # 1) 构建 ZCode 发行包
+bash scripts/e2e-local.sh             # 2) 网关等效 E2E
+node scripts/desktop-logic-test.mjs   # 3) 桌面编排逻辑测试
 bash scripts/validate-browser-plugin.sh
 ```
 
 镜像级验收：在任意具备 Docker 的机器上执行 `./build.sh && docker compose up -d`，
-然后按 §3 的三个入口人工验证；`/healthz` 可用于自动化探活（容器已内置 `HEALTHCHECK`）。
+然后按上方三个入口人工验证；`/healthz` 可用于自动化探活（容器已内置 `HEALTHCHECK`）。
+
+当前验证基线：本地等效 E2E **27/27**、桌面编排逻辑 **33/33**、远程镜像验收 **18/18**、
+`docker compose` 编排验收 **19/19**、运行时在线安装/切换 **11/11**。
 
 ---
 
-## 7. 目录结构
+## 📝 版本更新历史 (Changelog)
 
-```
-zcode-docker/
-├── Dockerfile                # 多阶段：Stage1 编译 ZCode 发行包，Stage2 运行时（Chromium/VNC/网关）
-├── docker-compose.yml
-├── .env.example
-├── build.sh                  # 一键构建 + 多标签 + 运行指引
-├── version.json              # 套件版本与兼容矩阵
-├── gateway/                  # 统一网关（认证/反代/控制台 API/桌面/快照/版本/插件）
-│   ├── index.js              # 路由与 REST API
-│   ├── zcode-manager.js      # ZCode 运行时守护、版本库、原子置换、回滚、自愈
-│   ├── desktop-manager.js    # Xvfb/x11vnc/noVNC/Chromium/客户端 编排
-│   ├── backup-service.js     # 快照创建/还原/导入导出（.zcode 域）
-│   ├── snapshot-manifest.js  # 快照清单与归档成员安全校验
-│   ├── plugin-manager.js     # zcode plugins CLI 封装
-│   ├── version-service.js    # 套件/上游版本信息与目标版本评估
-│   ├── auth.js / internal-token.js / ws-origin.js / token-crawler.js
-│   └── public/               # admin.html / login.html / setup.html / desktop-starting.html
-├── plugins/                  # ZCode 原生插件
-│   ├── marketplace.json      # 本地插件市场清单（供 zcode plugins marketplace add 使用）
-│   └── zcode-browser-desktop/# 容器浏览器插件（MCP 工具 + Skill）
-├── scripts/                  # entrypoint、运行时补丁、构建与验证脚本
-└── doc/                      # 契约、上游事实、验证报告与截图
-```
+### v0.1.0
+
+- 🎉 **首个正式版本**：内置官方 ZCode `3.14.3`，单端口聚合 **Web 工作区 / 管理控制台 / noVNC 虚拟桌面** 三入口。
+- 🔐 **统一访问认证**：单口令保护全部入口；口令留空时首次访问进入「初始化访问口令」向导，凭据以 `0600` 持久化。
+- 🎛️ **Web Admin 控制台**：版本管理（安装/切换/回滚）、插件、桌面、快照、系统设置五大面板。
+- 🪟 **虚拟桌面**：Xvfb + x11vnc + websockify/noVNC + Chromium；**默认打开干净空白页**（`ZCODE_DESKTOP_START_URL` 可指定 ZCode Web 或任意网址），支持切换 ZCode 官方 Electron 客户端。
+- 💾 **快照与备份**：创建 / 列表 / 探测 / 下载 / 导入 / 还原（仅配置或完整全量），含归档成员安全校验与单槽位就地回滚点。
+- 🔄 **运行时版本热切换**：多版本运行时库 + 跨层原子置换（overlayfs `EXDEV` 兜底）+ 中断自愈 + 失败自动重启。
+- 🧩 **自带 ZCode 原生插件** `zcode-browser-desktop`：MCP 六工具 + Skill，零第三方依赖。
+- 📂 **「添加项目」默认目录**：目录浏览器起始目录由 `/root` 调整为 `/workspace`（构建期最小补丁注入 `ZCODE_BROWSE_ROOT`）。
+- 🛡️ **容器加固**：`no-new-privileges` + `cap_drop: ALL` + 最小 `cap_add`，数据卷权限收紧至 `0700/0600`。
 
 ---
 
-## 8. 自带插件：`zcode-browser-desktop`（ZCode 原生）
+## 🙏 感谢与参考项目
 
-把参考项目的 DSH 版容器浏览器插件重写为 **ZCode 原生插件**（MCP + Skill，零第三方依赖），
-给 Agent 提供：`browser_status` / `browser_open` / `browser_screenshot` / `browser_click` / `browser_type` / `browser_wait`，
-底层驱动容器内 Chromium 的 CDP(9222) 与网关桌面接口。
-
-```bash
-# 校验插件清单（ZCode 原生规范）
-bash scripts/validate-browser-plugin.sh
-
-# 安装到运行中的容器（本地目录市场）
-docker exec <容器名> node /opt/zcode/bin/zcode.mjs plugins marketplace add /path/to/plugins --scope user
-docker exec <容器名> node /opt/zcode/bin/zcode.mjs plugins install zcode-browser-desktop@zcode-docker-local
-docker exec <容器名> node /opt/zcode/bin/zcode.mjs plugins list --json
-```
-
-安装后可在控制台「插件管理」页看到 `zcode-browser-desktop`（状态：已启用）。
-详见 [`plugins/zcode-browser-desktop/README.md`](plugins/zcode-browser-desktop/README.md)。
-
----
-
-## 9. 与参考项目的映射
-
-| 参考项目（DSH 版） | 本项目（ZCode 版） |
-|---|---|
-| `dsh-manager.js`（DSH 版本矩阵/熔断） | `zcode-manager.js`（运行时守护 + 版本库 + 原子置换 + 回滚） |
-| `backup-service.js`（`.dsh` 配置世代模型） | `backup-service.js`（`.zcode` 域，保留安全校验与还原范围） |
-| `plugin-manager.js`（DSH 插件体系） | `plugin-manager.js`（`zcode plugins` CLI） |
-| `version-service.js`（DSH Releases + version.json 矩阵） | `version-service.js`（`zai-org/ZCode` Releases + 自建 dist 索引） |
-| `/root/.dsh`、`/root/.dsh-snapshots` | `/root/.zcode`、`/root/.zcode-snapshots` |
-| DSH Web（3079） | ZCode Web（3030） |
-| `dsh-browser-desktop` 插件驱动的浏览器桌面 | 桌面默认即打开 ZCode Web；支持 Electron 客户端模式 |
-
----
-
-## 10. FAQ 与排障
-
-**Q1 首次访问没有登录页？** 说明 `AUTH_TOKEN` 为空且尚未初始化口令，会自动进入 `/setup` 向导；设置后凭据持久化在数据卷。
-
-**Q2 控制台显示「运行时未就绪」？** 查看 `/root/.zcode/logs/zcode-web.log`（或控制台「版本」页日志）；
-常见原因是工作区权限或出站代理导致上游启动失败。
-
-**Q3 桌面打开是黑屏？** 确认 `ZCODE_DESKTOP_ENABLED=1` 且容器内 Xvfb 正常；控制台「桌面」页可查看进程状态并一键重启。
-`client` 模式下若镜像未打包客户端，会给出明确错误并提示改用 `browser`。
-
-**Q4 如何升级 ZCode 运行时？** 配置 `ZCODE_DIST_URL` 指向发行包索引（`<base>/latest.json` 与
-`<base>/releases/<v>/zcode-<v>.tar.gz`），然后在控制台「版本」页一键安装并切换；切换前会自动保存回滚点。
-
-**Q5 端口/路径能改吗？** 能。`PROXY_PORT` 由 `.env` 决定宿主映射；`ADMIN_PATH`、`VNC_PATH` 可在控制台热改并持久化。
-
-**Q6 安全基线？** `docker-compose.yml` 默认 `no-new-privileges:true` + `cap_drop: ALL` + 最小 `cap_add`；
-入口脚本会强制收紧数据卷与凭据文件权限（`0700`/`0600`）。
-
----
-
-## 11. 许可与声明
-
-本项目为 ZCode 的**非官方容器化封装**，ZCode 本体版权归其作者所有（见 [zai-org/ZCode](https://github.com/zai-org/ZCode)）。
-容器内的 ZCode 发行包在构建时从上游源码编译，遵循上游许可。
+- [zai-org/ZCode](https://github.com/zai-org/ZCode) —— 上游 AI 编程工作台（本套件封装的核心）。
+- [misaka-link/deepseek-harness-docker](https://github.com/misaka-link/deepseek-harness-docker) —— 同源项目，
+  本套件的控制台、登录认证、初始化向导与快照备份能力继承自它，仅把被封装的核心从 DeepSeek Harness 换成了 ZCode。
