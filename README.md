@@ -20,7 +20,7 @@
 
 - Docker Engine 24+（含 BuildKit）、Docker Compose v2+
 - **直接使用预构建镜像**：只要 Docker，无需源码、无需构建（推荐）
-- **从源码构建镜像**：见下方「5. 从源码构建镜像」，需能访问 GitHub 与 npm 源，内存建议 ≥ 4 GB
+- **从源码构建镜像**：见下方「6. 从源码构建镜像」，需能访问 GitHub 与 npm 源，内存建议 ≥ 4 GB
 
 ### 2. 单行命令极速启动（推荐）
 
@@ -132,6 +132,7 @@ services:
 ```bash
 # 方式 A：克隆仓库后直接起
 git clone https://github.com/misaka-link/zcode-docker.git && cd zcode-docker
+cp .env.example .env                        # 环境配置文件：至少设置 AUTH_TOKEN（见下节）
 mkdir -p data/zcode data/snapshots data/browser workspace
 docker compose up -d
 
@@ -156,7 +157,36 @@ docker compose logs -f
 - 想用**本地构建**的镜像：先 `./build.sh`（默认打 `ghcr.io/misaka-link/zcode-docker` 标签，compose 直接复用），
   或在 `.env` 里设置 `ZCODE_IMAGE=zcode-docker:latest`。
 
-### 4. 启动后访问
+### 4. 环境配置文件（`.env`）
+
+`docker compose` 会自动读取同目录下的 **`.env`** 作为变量来源（compose 里的 `${AUTH_TOKEN:-}`、`${PROXY_PORT:-3080}` 等均取自它）。
+仓库自带模板 [`.env.example`](.env.example)，复制一份即可：
+
+```bash
+cp .env.example .env
+vi .env        # 至少设置 AUTH_TOKEN；端口 / 工作区 / 桌面等按需修改
+```
+
+`.env` 常用配置项（**完整清单见 [`.env.example`](.env.example) 与 [`doc/api-contract.md`](doc/api-contract.md) §2**）：
+
+| 配置项 | 默认值 | 说明 |
+|---|---|---|
+| `AUTH_TOKEN` | *空* | 统一访问口令（Web / 控制台 / VNC 共用）；留空 → 首次访问进初始化向导 |
+| `PROXY_PORT` | `3080` | 唯一对外端口（宿主映射与容器内监听同值） |
+| `ZCODE_WORKSPACE` | `/workspace` | AI 编程工作区目录 |
+| `ZCODE_BROWSE_ROOT` | `/workspace` | 「添加项目」目录浏览器默认起始目录 |
+| `ZCODE_DESKTOP_ENABLED` | `1` | 虚拟桌面总开关（设 `0` 可省内存） |
+| `ZCODE_DESKTOP_MODE` | `browser` | `browser`（容器内 Chromium）\| `client`（Electron 客户端） |
+| `ZCODE_DESKTOP_START_URL` | *空* | 桌面浏览器起始地址：空=`about:blank`；`zcode`=容器内 ZCode Web；`http(s)://…`=指定网址 |
+| `ZCODE_IDLE_TIMEOUT_MINUTES` | `30` | 桌面空闲休眠（`0`=不休眠） |
+| `ADMIN_PATH` / `VNC_PATH` | `/admin` / `/vnc` | 控制台与虚拟桌面访问路径 |
+| `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` | *空* | 出站网络代理（按需配置） |
+| `ZCODE_IMAGE` | `ghcr.io/misaka-link/zcode-docker:latest` | compose 使用的镜像；改成本地构建的 `zcode-docker:latest` 即可离线部署 |
+
+> **用 `docker run` 时没有 `.env`**：把上表配置项改写成 `-e KEY=VALUE` 传给容器即可（见「2. 单行命令极速启动」）。
+> 未在 `.env` 里出现的项一律使用镜像内置默认值，因此**最小可用配置只需一个 `AUTH_TOKEN`**（留空则走初始化向导）。
+
+### 5. 启动后访问
 
 | 入口 | 地址 |
 |---|---|
@@ -164,7 +194,7 @@ docker compose logs -f
 | 管理控制台 | `http://<服务器IP>:3080/admin/` |
 | 虚拟桌面（noVNC） | `http://<服务器IP>:3080/vnc/` |
 
-### 5. 从源码构建镜像（可选）
+### 6. 从源码构建镜像（可选）
 
 ```bash
 git clone https://github.com/misaka-link/zcode-docker.git && cd zcode-docker
