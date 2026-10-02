@@ -128,6 +128,73 @@ if [ ${#missing_items[@]} -gt 0 ]; then
   exit 1
 fi
 
+# 10.5 内置插件首装/升级（幂等，网关启动前完成，避免运行时重启才生效）
+#     - 镜像内置本地市场 /opt/zcode-docker/plugins，遍历其中的插件目录逐个对账；
+#     - 已安装同版本或更新版本 → 跳过（不打扰用户自选来源，如工作区仓库市场）；
+#     - 未安装 → 注册市场（仅首个插件 add 一次）并首装；已装旧版本 → 刷新市场并升级；
+#     - 只做 install/update，绝不调用 enable/disable，尊重用户启用位；
+#     - 任何一步失败仅打 ⚠️ 警告并继续启动，绝不能因插件问题阻塞网关拉起。
+if [ "${ZCODE_BUILTIN_PLUGINS:-1}" = "0" ]; then
+  echo "[entrypoint] ZCODE_BUILTIN_PLUGINS=0，跳过内置插件首装/升级"
+elif [ -d /opt/zcode-docker/plugins ]; then
+  _bp_reg="${ZCODE_DIR}/cli/plugins/installed_plugins.json"
+  _bp_market="$(node -e 'try{process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1])).name||"zcode-docker-local")}catch(e){}' /opt/zcode-docker/plugins/marketplace.json 2>/dev/null || true)"
+  _bp_market="${_bp_market:-zcode-docker-local}"
+  _bp_added=0
+  for _bp_dir in /opt/zcode-docker/plugins/*/; do
+    [ -d "${_bp_dir}" ] || continue
+    if [ ! -f "${_bp_dir}package.json" ]; then
+      echo "[entrypoint] ⚠️ 内置插件目录缺少 package.json，跳过: ${_bp_dir}"
+      continue
+    fi
+    _bp_meta="$(node -e 'try{const j=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write((j.name||"")+"\t"+(j.version||""))}catch(e){}' "${_bp_dir}package.json" 2>/dev/null || true)"
+    _bp_name="${_bp_meta%%$'\t'*}"
+    _bp_built="${_bp_meta##*$'\t'}"
+    if [ -z "${_bp_name}" ] || [ -z "${_bp_built}" ]; then
+      echo "[entrypoint] ⚠️ 内置插件 package.json 缺少 name/version，跳过: ${_bp_dir}"
+      continue
+    fi
+    _bp_inst="$(node -e 'try{const n=process.argv[1];const j=JSON.parse(require("fs").readFileSync(process.argv[2]));const p=(j.plugins||[]).filter(function(x){return x.name===n}).pop();process.stdout.write((p&&p.version)||"")}catch(e){}' "${_bp_name}" "${_bp_reg}" 2>/dev/null || true)"
+
+    # 分支 a：已安装同版本 → 跳过
+    if [ "${_bp_inst}" = "${_bp_built}" ]; then
+      echo "[entrypoint] 内置插件 ${_bp_name} 已是最新版 ${_bp_inst}，跳过"
+      continue
+    fi
+    # 分支 a'：已安装版本比内置更新（用户自选来源） → 跳过
+    if [ -n "${_bp_inst}" ] && [ "$(printf '%s\n%s\n' "${_bp_built}" "${_bp_inst}" | sort -V | head -n 1)" = "${_bp_built}" ]; then
+      echo "[entrypoint] 内置插件 ${_bp_name} 已安装更新版本 ${_bp_inst}（内置 ${_bp_built}），跳过"
+      continue
+    fi
+
+    if [ -z "${_bp_inst}" ]; then
+      # 分支 b：未安装 → 注册内置本地市场（多插件仅首个触发一次 add）并首装
+      if [ "${_bp_added}" = "0" ]; then
+        echo "[entrypoint] 注册内置插件市场 ${_bp_market}: /opt/zcode-docker/plugins"
+        if ! node /opt/zcode/bin/zcode.mjs plugins marketplace add /opt/zcode-docker/plugins --scope user; then
+          echo "[entrypoint] ⚠️ 内置插件市场注册失败，跳过插件 ${_bp_name}"
+          continue
+        fi
+        _bp_added=1
+      fi
+      echo "[entrypoint] 首装内置插件 ${_bp_name} ${_bp_built}..."
+      if ! node /opt/zcode/bin/zcode.mjs plugins install "${_bp_name}@${_bp_market}"; then
+        echo "[entrypoint] ⚠️ 内置插件 ${_bp_name} 首装失败，继续启动容器"
+      fi
+    else
+      # 分支 c：已安装旧版本 → 刷新市场元数据并升级
+      echo "[entrypoint] 升级内置插件 ${_bp_name}: ${_bp_inst} -> ${_bp_built}..."
+      if ! node /opt/zcode/bin/zcode.mjs plugins marketplace update "${_bp_market}"; then
+        echo "[entrypoint] ⚠️ 内置插件市场刷新失败，跳过插件 ${_bp_name} 升级"
+        continue
+      fi
+      if ! node /opt/zcode/bin/zcode.mjs plugins update "${_bp_name}"; then
+        echo "[entrypoint] ⚠️ 内置插件 ${_bp_name} 升级失败，继续启动容器"
+      fi
+    fi
+  done
+fi
+
 # 11. 启动统一网关守护循环
 #     - 采用守护重启循环而非单一 exec：支持管理面板在线热重启网关，且具备瞬时故障自愈能力
 #     - 指数退避 (1s -> 2s -> ... -> 30s)；连续 10 次启动失败则退出容器交由编排层介入

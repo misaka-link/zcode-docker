@@ -1,6 +1,6 @@
 {
   "name": "zcode-docker",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "开箱即用的 ZCode 容器化套件：统一网关 + 访问认证 + 初始化向导 + Web 控制台 + 快照备份 + noVNC 桌面",
   "core": {
     "name": "ZCode",
@@ -21,8 +21,8 @@
     "pull": "ghcr.io/misaka-link/zcode-docker:latest",
     "tags": [
       "latest",
-      "0.1.1",
-      "v0.1.1",
+      "0.1.2",
+      "v0.1.2",
       "zcode-3.14.3",
       "3.14.3"
     ]

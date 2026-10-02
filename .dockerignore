@@ -46,3 +46,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# 内置插件目录（其中的 SKILL.md/README.md 不受上方 *.md 排除影响）
+!plugins/
+!plugins/**

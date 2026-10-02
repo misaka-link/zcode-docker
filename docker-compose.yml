@@ -48,6 +48,7 @@ services:
       # - ZCODE_VERSIONS_MIN_FREE_MB=1536          # 版本切换前磁盘可用空间水位要求 (MB)
       # - ZCODE_DIST_URL=                          # 运行时版本在线下载基址 (留空则禁用在线安装)
       # - ZCODE_INTERNAL_TOKEN=0                   # 是否注入上游内部认证令牌 (默认 0)
+      # - ZCODE_BUILTIN_PLUGINS=1                  # 内置插件(zcode-browser-desktop)启动自动首装/升级 (0 关闭)
 
     # 容器安全加固
     security_opt:

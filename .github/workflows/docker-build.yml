@@ -19,6 +19,7 @@ on:
       - 'docker-compose.yml'
       - 'version.json'
       - 'gateway/**'
+      - 'plugins/**'
       - 'scripts/**'
       - '.github/workflows/docker-build.yml'
 
@@ -66,11 +67,36 @@ jobs:
           echo ""
 
           docker logs zcode-smoke | tail -40 || true
+
+          # 内置插件断言：entrypoint 在网关启动前（第 10.5 步）完成内置插件首装，
+          # 正常情况下 healthz 就绪时插件已装好；仍保留最多 ~30s 重试兜底，避免慢机误报。
+          plugin_ok=0
+          for i in $(seq 1 10); do
+            if docker exec zcode-smoke node -e '
+              const fs = require("fs");
+              const reg = JSON.parse(fs.readFileSync("/root/.zcode/cli/plugins/installed_plugins.json", "utf8"));
+              const inst = (reg.plugins || []).filter(p => p.name === "zcode-browser-desktop").pop();
+              if (!inst) { console.error("zcode-browser-desktop not found in installed_plugins.json"); process.exit(1); }
+              const built = JSON.parse(fs.readFileSync("/opt/zcode-docker/plugins/zcode-browser-desktop/package.json", "utf8"));
+              if ((inst.version || "") !== built.version) { console.error("version mismatch: installed=" + inst.version + " builtin=" + built.version); process.exit(1); }
+              console.log("builtin plugin ok: zcode-browser-desktop@" + inst.version);
+            ' > /tmp/plugin-check.log 2>&1; then
+              plugin_ok=1
+              break
+            fi
+            sleep 3
+          done
+          if [ "$plugin_ok" != "1" ]; then
+            echo "--- 内置插件断言失败，最近一次输出 ---"
+            cat /tmp/plugin-check.log || true
+          fi
+
           docker rm -f zcode-smoke >/dev/null 2>&1 || true
 
           [ "$ok" = "1" ] || { echo "冒烟测试失败: /healthz 未就绪"; exit 1; }
           grep -q '"ok":true' /tmp/healthz.json
-          echo "冒烟测试通过: 统一网关与核心服务健康检查正常"
+          [ "$plugin_ok" = "1" ] || { echo "冒烟测试失败: 内置插件首装失败"; exit 1; }
+          echo "冒烟测试通过: 统一网关与核心服务健康检查正常，内置插件 zcode-browser-desktop 已就位"
 
       - name: Check GHCR Push Eligibility
         id: check_push

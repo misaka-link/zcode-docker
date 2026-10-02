@@ -2,6 +2,12 @@
 
 本文件记录 zcode-docker 套件的实质性功能变更与缺陷修复。
 
+## v0.1.2
+
+### 新增
+
+- **插件 `zcode-browser-desktop` 内置镜像开箱即用**：Dockerfile 将 `plugins/` 本地插件市场 COPY 进镜像（`/opt/zcode-docker/plugins`），`entrypoint.sh` 新增第 10.5 步在网关启动前幂等完成首装/升级（未安装则 `marketplace add` + `plugins install`，已装旧版本则 `marketplace update` + `plugins update`，已装同版本或更新版本则跳过、绝不触碰 enable/disable 启用位），部署后无需再手动两步安装，也不触发「待重启生效」中间态；新增环境变量 `ZCODE_BUILTIN_PLUGINS`（默认 `1`，设 `0` 关闭）可禁用该行为；CI 冒烟测试新增内置插件就位断言（重试至多 ~30s），`on.push.paths` 过滤器补 `plugins/**`。
+
 ## v0.1.1
 
 ### 修复

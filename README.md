@@ -26,7 +26,7 @@
 | 3. 原生插件管理 | 4. 浏览器与虚拟桌面控制 |
 | :---: | :---: |
 | ![插件管理](doc/04-admin-tab-plugins.png) | ![桌面控制](doc/05-admin-tab-desktop.png) |
-| 直接驱动 `zcode plugins list/install/enable/disable/uninstall`；自带 `zcode-browser-desktop` 原生插件，安装后即出现在列表 | 浏览器/客户端两种桌面模式、1080p/2K 分辨率、空闲自动休眠、CDP 9222 远程调试开关、AI 截图默认画质与保存目录 |
+| 直接驱动 `zcode plugins list/install/enable/disable/uninstall`；自带 `zcode-browser-desktop` 原生插件，镜像内置、启动自动安装（开箱即用） | 浏览器/客户端两种桌面模式、1080p/2K 分辨率、空闲自动休眠、CDP 9222 远程调试开关、AI 截图默认画质与保存目录 |
 
 | 5. 配置快照与一键备份还原 | 6. 网关与系统安全配置 |
 | :---: | :---: |
@@ -208,6 +208,7 @@ docker compose up -d
 | `ZCODE_DESKTOP_START_URL` | *空* | 桌面起始地址：空=`about:blank`、`zcode`=容器内 ZCode Web、`http(s)://…`=指定网址 |
 | `ZCODE_DESKTOP_WIDTH` / `ZCODE_DESKTOP_HEIGHT` | `1920` / `1080` | 桌面分辨率（控制台可动态调整） |
 | `ZCODE_IDLE_TIMEOUT_MINUTES` | `30` | 桌面空闲自动休眠（`0` 为不休眠） |
+| `ZCODE_BUILTIN_PLUGINS` | `1` | 内置插件（`zcode-browser-desktop`）启动时自动首装/升级开关（设 `0` 关闭） |
 | `ZCODE_ENABLE_CDP` / `ZCODE_CDP_PORT` | `1` / `9222` | 容器 Chromium 远程调试开关与端口 |
 | `ZCODE_SCREENSHOT_QUALITY` / `ZCODE_SCREENSHOT_DIR` | `high` / *空* | AI 截图默认画质与保存子目录 |
 | `ZCODE_DIST_URL` | *空* | 运行时版本在线下载基址；留空则禁用在线安装（只读当前版本） |
@@ -223,17 +224,20 @@ docker compose up -d
 把容器浏览器与虚拟桌面能力封装为 **ZCode 原生插件**（MCP 工具 + Skill，零第三方依赖），
 Agent 可直接调用：`browser_status` / `browser_open` / `browser_screenshot` / `browser_click` / `browser_type` / `browser_wait`。
 
+**开箱即用**：插件已内置进镜像（`/opt/zcode-docker/plugins` 本地插件市场），容器每次启动时由
+entrypoint（第 10.5 步）在网关拉起前自动完成幂等首装/升级，无需手动安装、无需重启生效；
+已装同版本或更新版本则自动跳过，绝不改动用户自选来源与启用位。如需关闭该行为，设置
+环境变量 `ZCODE_BUILTIN_PLUGINS=0`。
+
 ```bash
-# 1) 校验插件清单（ZCode 原生规范）
+# 1) 本地校验插件清单（ZCode 原生规范，可选）
 bash scripts/validate-browser-plugin.sh
 
-# 2) 安装到运行中的容器（本地目录市场）
-docker exec zcode node /opt/zcode/bin/zcode.mjs plugins marketplace add /path/to/plugins --scope user
-docker exec zcode node /opt/zcode/bin/zcode.mjs plugins install zcode-browser-desktop@zcode-docker-local
+# 2) 查看容器内已安装插件
 docker exec zcode node /opt/zcode/bin/zcode.mjs plugins list --json
 ```
 
-安装后即可在控制台「插件管理」页看到 `zcode-browser-desktop`（状态：已启用）。
+启动后即可在控制台「插件管理」页看到 `zcode-browser-desktop`（状态：已启用）。
 详见 [`plugins/zcode-browser-desktop/README.md`](plugins/zcode-browser-desktop/README.md)。
 
 ---
@@ -294,6 +298,10 @@ bash scripts/validate-browser-plugin.sh
 ---
 
 ## 📝 版本更新历史 (Changelog)
+
+### v0.1.2
+
+- ✨ **内置插件开箱即用**：`zcode-browser-desktop` 插件随镜像内置（`/opt/zcode-docker/plugins` 本地插件市场），容器启动时由 entrypoint 在网关拉起前自动完成幂等首装/升级（同版本/更新版本自动跳过，不触碰启用位），部署后无需手动 `marketplace add` + `plugins install` 两步安装；环境变量 `ZCODE_BUILTIN_PLUGINS=0` 可关闭。
 
 ### v0.1.1
 

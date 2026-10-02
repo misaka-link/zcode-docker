@@ -201,6 +201,9 @@ COPY version.json* /opt/zcode-gateway/
 COPY gateway/ /opt/zcode-gateway/
 RUN cd /opt/zcode-gateway && npm install --omit=dev
 
+# 内置插件市场（开箱即用：容器启动时自动首装，见 entrypoint 第 10.5 步）
+COPY plugins/ /opt/zcode-docker/plugins/
+
 # 复制容器入口脚本与 Chromium 启动包装器并赋予可执行权限
 COPY scripts/entrypoint.sh /opt/zcode-docker/entrypoint.sh
 COPY scripts/chromium-docker /opt/zcode-docker/chromium-docker
