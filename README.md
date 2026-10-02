@@ -14,13 +14,174 @@
 
 ---
 
+## 🚀 Docker 一键梭哈
+
+### 1. 环境要求
+
+- Docker Engine 24+（含 BuildKit）、Docker Compose v2+
+- **直接使用预构建镜像**：只要 Docker，无需源码、无需构建（推荐）
+- **从源码构建镜像**：见下方「5. 从源码构建镜像」，需能访问 GitHub 与 npm 源，内存建议 ≥ 4 GB
+
+### 2. 单行命令极速启动（推荐）
+
+```bash
+docker run -d \
+  --name zcode \
+  --restart unless-stopped \
+  -p 3080:3080 \
+  -e AUTH_TOKEN=your-strong-token \
+  -v $(pwd)/data/zcode:/root/.zcode \
+  -v $(pwd)/workspace:/workspace \
+  -v $(pwd)/data/snapshots:/root/.zcode-snapshots \
+  -v $(pwd)/data/browser:/root/.config/chromium \
+  ghcr.io/misaka-link/zcode-docker:latest
+```
+
+> `AUTH_TOKEN` 也可以留空：首次访问会自动进入「初始化访问口令」向导，设置后以 `0600` 持久化到数据卷。
+
+**镜像标签**（同一镜像多标签，便于精确锁定）：
+
+| 标签 | 含义 |
+|---|---|
+| `ghcr.io/misaka-link/zcode-docker:latest` | 最新构建（推荐） |
+| `ghcr.io/misaka-link/zcode-docker:0.1.0` / `:v0.1.0` | 套件工程版本 |
+| `ghcr.io/misaka-link/zcode-docker:zcode-3.14.3` / `:3.14.3` | 内置 ZCode 运行时版本 |
+
+### 3. Docker 容器编排（docker-compose）
+
+仓库根目录的 [`docker-compose.yml`](docker-compose.yml) 全文如下（默认拉取已发布的 GHCR 镜像，无需本地构建）：
+
+```yaml
+services:
+  zcode:
+    # 默认使用已发布的 GHCR 镜像：`docker compose up -d` 会自动拉取，无需本地构建。
+    # 想用本地构建的镜像：执行 `./build.sh`（默认打同样的 ghcr.io/misaka-link/zcode-docker 标签），
+    # 或在 .env 里设置 ZCODE_IMAGE=zcode-docker:latest。
+    image: ${ZCODE_IMAGE:-ghcr.io/misaka-link/zcode-docker:latest}
+    container_name: zcode
+    restart: unless-stopped
+    ports:
+      # 仅暴露单个统一端口（包含 ZCode Web 工作区、管理控制台与 VNC 桌面）
+      - "${PROXY_PORT:-3080}:${PROXY_PORT:-3080}"
+    environment:
+      # 访问认证口令（Access Code）
+      # 留空时：首次访问会自动引导至「初始化访问口令」设置向导；设置后持久化至数据卷
+      # 显式填写：跳过向导直接使用该口令保护所有入口
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      # 统一对外端口
+      - PROXY_PORT=${PROXY_PORT:-3080}
+      # 运行根目录（默认 /root，非 root 部署可调整）
+      - ZCODE_HOME=${ZCODE_HOME:-/root}
+      # AI 编程工作区目录
+      - ZCODE_WORKSPACE=${ZCODE_WORKSPACE:-/workspace}
+      # 前端「添加项目」目录浏览器默认起始目录
+      - ZCODE_BROWSE_ROOT=${ZCODE_BROWSE_ROOT:-/workspace}
+      # 虚拟桌面总开关（1: 开启, 0: 关闭）
+      - ZCODE_DESKTOP_ENABLED=${ZCODE_DESKTOP_ENABLED:-1}
+      # 虚拟桌面运行模式（browser: 容器内置 Chromium 访问 Web; client: Electron 客户端）
+      - ZCODE_DESKTOP_MODE=${ZCODE_DESKTOP_MODE:-browser}
+
+      # 出站网络代理（按需配置）
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - ALL_PROXY=${ALL_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-localhost,127.0.0.1}
+
+      # --- 以下参数均已在容器与网关内置默认值，默认注释保持简洁，按需启用：---
+      # - SESSION_SECRET=${SESSION_SECRET:-}        # 会话签名密钥 (留空自动生成并持久化至数据卷)
+      # - ADMIN_PATH=/admin                        # 自定义管理面板访问路径 (默认 /admin)
+      # - VNC_PATH=/vnc                            # 自定义虚拟桌面访问路径 (默认 /vnc)
+      # - TRUST_PROXY=0                            # 是否信任反向代理转发的 X-Forwarded-For (默认 0)
+      # - PUBLIC_HOST=                             # WebSocket 同源白名单 (逗号分隔，如 zcode.example.com)
+      # - ZCODE_IDLE_TIMEOUT_MINUTES=30            # 桌面空闲休眠时间 (分钟，0为不休眠始终保持)
+      # - ZCODE_DESKTOP_WIDTH=1920                 # 虚拟桌面宽度分辨率
+      # - ZCODE_DESKTOP_HEIGHT=1080                # 虚拟桌面高度分辨率
+      # - ZCODE_DESKTOP_DEPTH=24                   # 虚拟桌面色彩深度
+      # - ZCODE_SCREENSHOT_QUALITY=high            # AI 截图默认画质 (high/medium/low)
+      # - ZCODE_SCREENSHOT_DIR=                    # AI 截图保存子目录 (相对工作区，留空为根目录)
+      # - ZCODE_VERSIONS_MIN_FREE_MB=1536          # 版本切换前磁盘可用空间水位要求 (MB)
+      # - ZCODE_DIST_URL=                          # 运行时版本在线下载基址 (留空则禁用在线安装)
+      # - ZCODE_INTERNAL_TOKEN=0                   # 是否注入上游内部认证令牌 (默认 0)
+
+    # 容器安全加固
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETUID
+      - SETGID
+      - KILL
+
+    volumes:
+      # 1. ZCode 系统与配置数据卷（存储配置、会话历史与扩展状态）
+      - ./data/zcode:/root/.zcode
+      # 2. 独立项目工作区目录（AI 生成的项目代码、文档，与系统数据解耦）
+      - ./workspace:/workspace
+      # 3. 快照与多版本运行时归档目录（支持版本切换与灾难恢复）
+      - ./data/snapshots:/root/.zcode-snapshots
+      # 4. Chromium 用户数据缓存（持久化保存浏览器登录状态与 Cookies）
+      - ./data/browser:/root/.config/chromium
+```
+
+启动：
+
+```bash
+# 方式 A：克隆仓库后直接起
+git clone https://github.com/misaka-link/zcode-docker.git && cd zcode-docker
+mkdir -p data/zcode data/snapshots data/browser workspace
+docker compose up -d
+
+# 方式 B：只取编排文件与配置模板（不需要源码）
+mkdir -p zcode-docker && cd zcode-docker
+curl -fsSLO https://raw.githubusercontent.com/misaka-link/zcode-docker/main/docker-compose.yml
+curl -fsSL  https://raw.githubusercontent.com/misaka-link/zcode-docker/main/.env.example -o .env
+mkdir -p data/zcode data/snapshots data/browser workspace
+docker compose up -d
+
+# 查看状态与日志
+docker compose ps          # 应显示 (healthy)
+docker compose logs -f
+```
+
+要点：
+
+- `PROXY_PORT` 同时决定 **宿主映射端口** 与 **容器内监听端口**，改一处即可（避免映射错位）。
+- 数据落在 `./data/*` 与 `./workspace`，容器重建/升级镜像不丢数据。
+- 容器内置 `HEALTHCHECK`（`/healthz`），`docker compose ps` 直接可见健康状态。
+- 升级：`docker compose pull && docker compose up -d`。
+- 想用**本地构建**的镜像：先 `./build.sh`（默认打 `ghcr.io/misaka-link/zcode-docker` 标签，compose 直接复用），
+  或在 `.env` 里设置 `ZCODE_IMAGE=zcode-docker:latest`。
+
+### 4. 启动后访问
+
+| 入口 | 地址 |
+|---|---|
+| Web 工作区（ZCode） | `http://<服务器IP>:3080/` |
+| 管理控制台 | `http://<服务器IP>:3080/admin/` |
+| 虚拟桌面（noVNC） | `http://<服务器IP>:3080/vnc/` |
+
+### 5. 从源码构建镜像（可选）
+
+```bash
+git clone https://github.com/misaka-link/zcode-docker.git && cd zcode-docker
+./build.sh                    # 默认走国内镜像源加速；海外构建用 ./build.sh --china-mirror=0
+# 常用参数：--no-cache / --with-desktop-client / --dist-url <预构建发行包URL> / --ref v3.14.3
+docker compose up -d
+```
+
+---
+
 ## 1. 它是什么
 
 | 能力 | 说明 |
 |---|---|
 | 🖥️ **ZCode Web 工作区** | 上游 ZCode 的浏览器界面（`zcode --web`），由容器内 `zcode-manager` 守护与探活 |
 | 🎛️ **Web 控制台** | 版本管理（安装/切换/回滚）、插件、桌面、快照、系统设置五大面板 |
-| 🪟 **noVNC 虚拟桌面** | Xvfb + x11vnc + noVNC，桌面里默认用 **Chromium 打开 ZCode Web**；也可切换为 **ZCode Electron 客户端** |
+| 🪟 **noVNC 虚拟桌面** | Xvfb + x11vnc + noVNC，桌面里默认用 **Chromium 打开空白页**（`ZCODE_DESKTOP_START_URL` 可改为 ZCode Web 或任意网址）；也可切换为 **ZCode Electron 客户端** |
 | 🔐 **统一认证** | 单口令保护全部入口；口令留空时首次访问进入「初始化向导」，凭据以 `0600` 持久化 |
 | 📦 **快照与备份** | 配置快照的创建/列表/探测/下载/导入/还原（支持「仅配置」与「完整全量」两种范围） |
 | 🔄 **版本热切换** | 多版本运行时库 + 原子置换 + 单槽位回滚 + 中断自愈（`ZCODE_DIST_URL` 可选） |
@@ -52,100 +213,9 @@
 
 ---
 
-## 3. 快速开始
-
-### 3.1 环境要求
-- Docker Engine 24+（含 BuildKit）、Docker Compose v2+
-- **直接使用预构建镜像**：只要 Docker，无需源码、无需构建（推荐）
-- **从源码构建镜像**：需能访问 GitHub 与 npm 源，内存建议 ≥ 4 GB
-
-### 3.2 单行命令极速启动（推荐，直接拉取已发布镜像）
-
-```bash
-docker run -d \
-  --name zcode \
-  --restart unless-stopped \
-  -p 3080:3080 \
-  -e AUTH_TOKEN=your-strong-token \
-  -v $(pwd)/data/zcode:/root/.zcode \
-  -v $(pwd)/workspace:/workspace \
-  -v $(pwd)/data/snapshots:/root/.zcode-snapshots \
-  -v $(pwd)/data/browser:/root/.config/chromium \
-  ghcr.io/misaka-link/zcode-docker:latest
-```
-
-> `AUTH_TOKEN` 也可以留空：首次访问会自动进入「初始化访问口令」向导，设置后以 `0600` 持久化到数据卷。
-
-**镜像标签**（同一镜像多标签，便于精确锁定）：
-
-| 标签 | 含义 |
-|---|---|
-| `ghcr.io/misaka-link/zcode-docker:latest` | 最新构建（推荐） |
-| `ghcr.io/misaka-link/zcode-docker:0.1.0` / `:v0.1.0` | 套件工程版本 |
-| `ghcr.io/misaka-link/zcode-docker:zcode-3.14.3` / `:3.14.3` | 内置 ZCode 运行时版本 |
-
-启动后访问：
-
-| 入口 | 地址 |
-|---|---|
-| Web 工作区（ZCode） | `http://<服务器IP>:3080/` |
-| 管理控制台 | `http://<服务器IP>:3080/admin/` |
-| 虚拟桌面（noVNC） | `http://<服务器IP>:3080/vnc/` |
-
-### 3.3 Docker 容器编排（docker-compose）
-
-```bash
-mkdir -p zcode-docker && cd zcode-docker
-curl -fsSLO https://raw.githubusercontent.com/misaka-link/zcode-docker/main/docker-compose.yml
-curl -fsSL  https://raw.githubusercontent.com/misaka-link/zcode-docker/main/.env.example -o .env
-mkdir -p data/zcode data/snapshots data/browser workspace
-docker compose up -d          # 自动拉取 GHCR 镜像并启动
-docker compose ps             # 应显示 (healthy)
-docker compose logs -f
-```
-
-`docker-compose.yml` 关键内容：
-
-```yaml
-services:
-  zcode:
-    image: ghcr.io/misaka-link/zcode-docker:latest   # 也可用 :0.1.0 / :zcode-3.14.3 锁定
-    container_name: zcode
-    restart: unless-stopped
-    ports:
-      - "${PROXY_PORT:-3080}:${PROXY_PORT:-3080}"
-    environment:
-      - AUTH_TOKEN=${AUTH_TOKEN:-}                   # 留空 → 首次访问进初始化向导
-      - PROXY_PORT=${PROXY_PORT:-3080}
-      - ZCODE_DESKTOP_ENABLED=${ZCODE_DESKTOP_ENABLED:-1}
-      - ZCODE_DESKTOP_MODE=${ZCODE_DESKTOP_MODE:-browser}
-    volumes:
-      - ./data/zcode:/root/.zcode
-      - ./workspace:/workspace
-      - ./data/snapshots:/root/.zcode-snapshots
-      - ./data/browser:/root/.config/chromium
-```
-
-要点：
-- `PROXY_PORT` 同时决定 **宿主映射端口** 与 **容器内监听端口**，改一处即可（避免映射错位）。
-- 数据落在 `./data/*` 与 `./workspace`，容器重建/升级镜像不丢数据。
-- 容器内置 `HEALTHCHECK`（`/healthz`），`docker compose ps` 直接可见健康状态。
-- 升级：`docker compose pull && docker compose up -d`。
-- 想用**本地构建**的镜像：先 `./build.sh`（默认打 `ghcr.io/misaka-link/zcode-docker` 标签，compose 直接复用），
-  或在 `.env` 里设置 `ZCODE_IMAGE=zcode-docker:latest`。
-
-### 3.4 从源码构建镜像（可选）
-
-```bash
-git clone https://github.com/misaka-link/zcode-docker.git && cd zcode-docker
-./build.sh                    # 默认走国内镜像源加速；海外构建用 ./build.sh --china-mirror=0
-# 常用参数：--no-cache / --with-desktop-client / --dist-url <预构建发行包URL> / --ref v3.14.3
-docker compose up -d
-```
-
 ---
 
-## 4. 虚拟桌面的两种模式
+## 3. 虚拟桌面的两种模式
 
 由 `ZCODE_DESKTOP_MODE` 选择，也可在控制台「桌面」页运行时切换（切换后需重启桌面生效）：
 
@@ -171,7 +241,7 @@ AI 截图默认画质与目录。
 
 ---
 
-## 5. 环境变量
+## 4. 环境变量
 
 完整清单见 [`.env.example`](.env.example) 与契约 [`doc/api-contract.md`](doc/api-contract.md) §2，常用项：
 
@@ -195,7 +265,7 @@ AI 截图默认画质与目录。
 
 ---
 
-## 6. 数据卷
+## 5. 数据卷
 
 | 宿主路径 | 容器内 | 内容 |
 |---|---|---|
@@ -208,7 +278,7 @@ AI 截图默认画质与目录。
 
 ---
 
-## 7. 开发与验证
+## 6. 开发与验证
 
 本仓库自带可复现的验证链路（脚本均在 [`scripts/`](scripts/)）：
 
@@ -239,7 +309,7 @@ bash scripts/validate-browser-plugin.sh
 
 ---
 
-## 8. 目录结构
+## 7. 目录结构
 
 ```
 zcode-docker/
@@ -267,7 +337,7 @@ zcode-docker/
 
 ---
 
-## 9. 自带插件：`zcode-browser-desktop`（ZCode 原生）
+## 8. 自带插件：`zcode-browser-desktop`（ZCode 原生）
 
 把参考项目的 DSH 版容器浏览器插件重写为 **ZCode 原生插件**（MCP + Skill，零第三方依赖），
 给 Agent 提供：`browser_status` / `browser_open` / `browser_screenshot` / `browser_click` / `browser_type` / `browser_wait`，
