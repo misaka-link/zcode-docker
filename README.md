@@ -85,83 +85,35 @@ docker run -d \
 
 ### 3. Docker 容器编排（docker-compose）
 
-仓库根目录的 [`docker-compose.yml`](docker-compose.yml) 全文如下（默认拉取已发布的 GHCR 镜像，无需本地构建）：
+最小可用版 `docker-compose.yml`（默认拉取已发布的 GHCR 镜像，无需本地构建）：
 
 ```yaml
 services:
   zcode:
-    # 默认使用已发布的 GHCR 镜像：`docker compose up -d` 会自动拉取，无需本地构建。
-    # 想用本地构建的镜像：执行 `./build.sh`（默认打同样的 ghcr.io/misaka-link/zcode-docker 标签），
-    # 或在 .env 里设置 ZCODE_IMAGE=zcode-docker:latest。
-    image: ${ZCODE_IMAGE:-ghcr.io/misaka-link/zcode-docker:latest}
+    image: ghcr.io/misaka-link/zcode-docker:latest
     container_name: zcode
     restart: unless-stopped
     ports:
       # 仅暴露单个统一端口（包含 ZCode Web 工作区、管理控制台与 VNC 桌面）
-      - "${PROXY_PORT:-3080}:${PROXY_PORT:-3080}"
+      - "3080:3080"
     environment:
-      # 访问认证口令（Access Code）
-      # 留空时：首次访问会自动引导至「初始化访问口令」设置向导；设置后持久化至数据卷
-      # 显式填写：跳过向导直接使用该口令保护所有入口
-      - AUTH_TOKEN=${AUTH_TOKEN:-}
-      # 统一对外端口
-      - PROXY_PORT=${PROXY_PORT:-3080}
-      # 运行根目录（默认 /root，非 root 部署可调整）
-      - ZCODE_HOME=${ZCODE_HOME:-/root}
-      # AI 编程工作区目录
-      - ZCODE_WORKSPACE=${ZCODE_WORKSPACE:-/workspace}
-      # 前端「添加项目」目录浏览器默认起始目录
-      - ZCODE_BROWSE_ROOT=${ZCODE_BROWSE_ROOT:-/workspace}
-      # 虚拟桌面总开关（1: 开启, 0: 关闭）
-      - ZCODE_DESKTOP_ENABLED=${ZCODE_DESKTOP_ENABLED:-1}
-      # 虚拟桌面运行模式（browser: 容器内置 Chromium 访问 Web; client: Electron 客户端）
-      - ZCODE_DESKTOP_MODE=${ZCODE_DESKTOP_MODE:-browser}
-
-      # 出站网络代理（按需配置）
-      - HTTP_PROXY=${HTTP_PROXY:-}
-      - HTTPS_PROXY=${HTTPS_PROXY:-}
-      - ALL_PROXY=${ALL_PROXY:-}
-      - NO_PROXY=${NO_PROXY:-localhost,127.0.0.1}
-
-      # --- 以下参数均已在容器与网关内置默认值，默认注释保持简洁，按需启用：---
-      # - SESSION_SECRET=${SESSION_SECRET:-}        # 会话签名密钥 (留空自动生成并持久化至数据卷)
-      # - ADMIN_PATH=/admin                        # 自定义管理面板访问路径 (默认 /admin)
-      # - VNC_PATH=/vnc                            # 自定义虚拟桌面访问路径 (默认 /vnc)
-      # - TRUST_PROXY=0                            # 是否信任反向代理转发的 X-Forwarded-For (默认 0)
-      # - PUBLIC_HOST=                             # WebSocket 同源白名单 (逗号分隔，如 zcode.example.com)
-      # - ZCODE_IDLE_TIMEOUT_MINUTES=30            # 桌面空闲休眠时间 (分钟，0为不休眠始终保持)
-      # - ZCODE_DESKTOP_WIDTH=1920                 # 虚拟桌面宽度分辨率
-      # - ZCODE_DESKTOP_HEIGHT=1080                # 虚拟桌面高度分辨率
-      # - ZCODE_DESKTOP_DEPTH=24                   # 虚拟桌面色彩深度
-      # - ZCODE_SCREENSHOT_QUALITY=high            # AI 截图默认画质 (high/medium/low)
-      # - ZCODE_SCREENSHOT_DIR=                    # AI 截图保存子目录 (相对工作区，留空为根目录)
-      # - ZCODE_VERSIONS_MIN_FREE_MB=1536          # 版本切换前磁盘可用空间水位要求 (MB)
-      # - ZCODE_DIST_URL=                          # 运行时版本在线下载基址 (留空则禁用在线安装)
-      # - ZCODE_INTERNAL_TOKEN=0                   # 是否注入上游内部认证令牌 (默认 0)
-
-    # 容器安全加固
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - DAC_OVERRIDE
-      - FOWNER
-      - SETUID
-      - SETGID
-      - KILL
-
+      # 访问认证口令（用于登录 Web 工作区、管理控制台与 VNC 桌面）
+      # 留空时：首次访问会自动引导至「初始化访问口令」向导，设置后持久化至数据卷
+      - AUTH_TOKEN=your-strong-token
+      # 统一对外端口（需与上面的端口映射保持一致）
+      - PROXY_PORT=3080
+      # 虚拟桌面总开关（1: 开启, 0: 关闭）与模式（browser: 容器内置 Chromium; client: Electron 客户端）
+      - ZCODE_DESKTOP_ENABLED=1
+      - ZCODE_DESKTOP_MODE=browser
     volumes:
-      # 1. ZCode 系统与配置数据卷（存储配置、会话历史与扩展状态）
       - ./data/zcode:/root/.zcode
-      # 2. 独立项目工作区目录（AI 生成的项目代码、文档，与系统数据解耦）
       - ./workspace:/workspace
-      # 3. 快照与多版本运行时归档目录（支持版本切换与灾难恢复）
       - ./data/snapshots:/root/.zcode-snapshots
-      # 4. Chromium 用户数据缓存（持久化保存浏览器登录状态与 Cookies）
       - ./data/browser:/root/.config/chromium
 ```
+
+> 仓库根目录的 [`docker-compose.yml`](docker-compose.yml) 是**完整版**：所有可调项都改由 `.env` 注入（`${AUTH_TOKEN:-}` 形式），
+> 并附带容器安全加固（`no-new-privileges` + `cap_drop: ALL`）与全部可选参数注释；直接 `docker compose up -d` 即可用。
 
 启动：
 
