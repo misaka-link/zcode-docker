@@ -149,6 +149,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     x11vnc \
     novnc \
     websockify \
+    # X11 截屏兜底引擎（CDP 不可用时 browser_screenshot 降级使用）
+    scrot \
     # 容器 Chromium 浏览器及运行库
     chromium \
     libnss3 \

@@ -22,6 +22,7 @@ const http = require('http');
 const crypto = require('crypto');
 
 const backupService = require('./backup-service');
+const pluginManager = require('./plugin-manager');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -237,6 +238,15 @@ class ZCodeManager {
     this.manualStopped = false;
     rotateLogIfNeeded();
     ensureDir(path.dirname(WEB_LOG));
+
+    // 在 spawn 之前读取插件启用位：这才是本次运行时 bootstrap 将读到的那份配置。
+    // 探活成功后再落盘为「运行时快照」，供插件管理页识别「配置已改、尚未重启」的中间态。
+    let pluginEnabledAtBoot = null;
+    try {
+      pluginEnabledAtBoot = await pluginManager.readEnabledMap();
+    } catch (err) {
+      console.warn('[zcode-manager] 读取插件启用位失败(跳过快照):', (err && err.message) || err);
+    }
     const logFd = fs.openSync(WEB_LOG, 'a');
 
     // 使用 runner 时补上 --web 参数（runner 会自行 fork 真正的服务进程）
@@ -270,6 +280,11 @@ class ZCodeManager {
     const probe = await this.waitReady(Number(process.env.ZCODE_READY_TIMEOUT_MS) || 90000);
     this.ready = probe.ok;
     if (!probe.ok) console.warn('[zcode-manager] 启动后探活未通过:', probe.error || probe.status);
+    // 探活通过（或至少进程已拉起）才落盘快照：记录运行时本次实际加载的插件生效态
+    if (probe.ok && pluginEnabledAtBoot) {
+      const snap = pluginManager.writeRuntimeSnapshot(pluginEnabledAtBoot);
+      if (!snap.ok) console.warn('[zcode-manager] 写入插件运行时快照失败:', snap.error);
+    }
     return { ok: probe.ok, ready: this.ready, status: this.getStatus() };
   }
 

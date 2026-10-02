@@ -1,12 +1,12 @@
 # zcode-docker
 
-> 📌 **版本信息**：内置官方 ZCode 核心 `3.14.3` ｜ 本项目工程版本 `0.1.0`
+> 📌 **版本信息**：内置官方 ZCode 核心 `3.14.3` ｜ 本项目工程版本 `0.1.1`
 > 🔗 **快速直达链接**：
 > - ⚡ **官方 ZCode 仓库**：[zai-org/ZCode](https://github.com/zai-org/ZCode) ｜ [官方 Releases](https://github.com/zai-org/ZCode/releases)
 > - 📦 **本项目 Docker 仓库**：[misaka-link/zcode-docker](https://github.com/misaka-link/zcode-docker) ｜ [本项目 Releases](https://github.com/misaka-link/zcode-docker/releases) ｜ [GHCR 镜像包页](https://github.com/misaka-link/zcode-docker/pkgs/container/zcode-docker)
 > 🏷️ **镜像标签规范**：默认拉取镜像统一保持 **`:latest`**，开箱即用；每次构建镜像时**均会额外多打两组版本标签**：
 > 1. **内置官方 ZCode 版本标签**（如 `:zcode-3.14.3`、`:3.14.3`），精确锁定底层 ZCode 引擎；
-> 2. **本项目自身工程版本标签**（如 `:0.1.0`、`:v0.1.0`），精确锁定本容器套件自身的版本。
+> 2. **本项目自身工程版本标签**（如 `:0.1.1`、`:v0.1.1`），精确锁定本容器套件自身的版本。
 
 面向官方 [ZCode](https://github.com/zai-org/ZCode)（Z.ai 出品的 AI 编程工作台）打造的**开箱即用容器化套件与可视化 Web Admin 控制台**。基于 **Debian Trixie & Node 24** 现代运行时底座，**一个端口**同时提供 **ZCode Web 工作区 / Web 管理控制台 / noVNC 虚拟桌面** 三入口；内置轻量访问认证与初始化向导、配置快照与一键还原、ZCode 运行时多版本在线热切换、容器内真实 Chromium 桌面与 AI 浏览器插件。
 
@@ -52,7 +52,7 @@
 | 标签 | 含义 |
 | --- | --- |
 | `ghcr.io/misaka-link/zcode-docker:latest` | **最新构建（推荐）** |
-| `ghcr.io/misaka-link/zcode-docker:0.1.0` / `:v0.1.0` | 本项目工程版本标签，精确锁定套件版本 |
+| `ghcr.io/misaka-link/zcode-docker:0.1.1` / `:v0.1.1` | 本项目工程版本标签，精确锁定套件版本 |
 | `ghcr.io/misaka-link/zcode-docker:zcode-3.14.3` / `:3.14.3` | 内置 ZCode 官方引擎版本标签，精确锁定底层运行时 |
 
 ---
@@ -81,7 +81,7 @@ docker run -d \
 ```
 
 > `AUTH_TOKEN` 也可以留空：首次访问会自动进入「初始化访问口令」向导，设置后以 `0600` 持久化到数据卷。
-> 想锁定版本，把末尾标签换成 `:0.1.0`（套件版本）或 `:zcode-3.14.3`（内置 ZCode 版本）即可。
+> 想锁定版本，把末尾标签换成 `:0.1.1`（套件版本）或 `:zcode-3.14.3`（内置 ZCode 版本）即可。
 
 ### 3. Docker 容器编排（docker-compose）
 
@@ -294,6 +294,12 @@ bash scripts/validate-browser-plugin.sh
 ---
 
 ## 📝 版本更新历史 (Changelog)
+
+### v0.1.1
+
+- 🐛 **修复浏览器插件截图失效**：`zcode-browser-desktop` 的 `browser_screenshot` 因 `tools.mjs` 漏导入 `isCdpAlive` 而必然抛 `isCdpAlive is not defined`，导致 CDP 截屏完全不可用。补齐导入后恢复。
+- 🐛 **修复截图降级链路断死**：镜像未安装 X11 截屏工具 `scrot`，CDP 不可用时「降级到 scrot」分支无二进制可用、直接失败。Dockerfile 增加 `scrot`，CDP 与 X11 两级截屏兜底均可用。
+- ✨ **插件管理页新增「待重启生效」中间态提示**：插件开关写入配置是即时的，但 ZCode 运行时只在启动时解析插件组件，此前存在「配置已改、运行时仍按旧配置加载」却无任何提示的盲区。现在运行时每次启动会记录当时的插件启用位快照，管理台据此比对，对不一致的插件显示橙色「待重启生效」徽标（含「配置：已停用 · 运行时仍加载中」说明）并在页面顶部给出汇总横幅，重启后自动消失。覆盖「停用未生效」与「启用未加载」两个方向。
 
 ### v0.1.0
 

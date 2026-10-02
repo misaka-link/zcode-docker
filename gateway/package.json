@@ -1,6 +1,6 @@
 {
   "name": "zcode-gateway",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "zcode-docker 统一网关：单端口聚合 ZCode Web 工作区、Web 控制台与 noVNC 虚拟桌面，并提供统一认证、快照备份与版本管理",
   "main": "index.js",
   "scripts": {

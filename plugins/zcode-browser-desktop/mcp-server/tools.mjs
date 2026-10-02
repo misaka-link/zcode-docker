@@ -12,6 +12,7 @@ import {
 } from './desktop-client.mjs';
 import {
   getCdpPort,
+  isCdpAlive,
   waitForCdp,
   listPages,
   newTab,

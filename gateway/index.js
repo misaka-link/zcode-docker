@@ -1045,7 +1045,20 @@ async function handleAdminApi(req, res, pathname, query) {
       try {
         const r = await pluginManager.getPlugins();
         const plugins = Array.isArray(r) ? r : (r && Array.isArray(r.plugins) ? r.plugins : []);
-        return sendJson(res, 200, { ok: true, plugins });
+        // 附带运行时快照元信息：供管理页展示「上次运行时加载时刻」与是否已有权威基线
+        const snap = pluginManager.getRuntimeSnapshot();
+        const core = getRawCoreStatus();
+        return sendJson(res, 200, {
+          ok: true,
+          plugins,
+          runtime: {
+            running: core.running === true,
+            ready: core.ready === true,
+            uptimeSeconds: core.uptimeSeconds || 0,
+            snapshotAt: snap.ok ? snap.capturedAt : null,
+            snapshotKnown: snap.ok,
+          },
+        });
       } catch (err) {
         return sendJson(res, 500, { ok: false, error: safeErrMsg(err) });
       }

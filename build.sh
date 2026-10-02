@@ -24,9 +24,9 @@ NO_CACHE_FLAG=""
 EXTRA_TAGS=()
 
 # 读取套件自身版本号 (PROJECT_VERSION)
-PROJ_VER="0.1.0"
+PROJ_VER="0.1.1"
 if [ -f "version.json" ]; then
-  PROJ_VER=$(node -e "try{const v=require('./version.json');process.stdout.write(String(v.version||'0.1.0'))}catch(e){process.stdout.write('0.1.0')}" 2>/dev/null || echo "0.1.0")
+  PROJ_VER=$(node -e "try{const v=require('./version.json');process.stdout.write(String(v.version||'0.1.1'))}catch(e){process.stdout.write('0.1.1')}" 2>/dev/null || echo "0.1.1")
 fi
 
 print_usage() {

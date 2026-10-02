@@ -1826,6 +1826,8 @@
           页的<strong>容器浏览器总开关</strong>——即时生效且会一并撤销 AI 工具与提示词。
         </p>
 
+        <div id="pluginPendingBanner" style="display:none; margin:10px 0 0; padding:10px 12px; font-size:12px; line-height:1.7; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:var(--radius-md);"></div>
+
         <div class="table-scroll" style="margin-top:12px;">
           <table class="table table-stack" id="pluginsTable">
             <thead>
@@ -1833,7 +1835,7 @@
                 <th style="width: 230px;">插件名称 / ID</th>
                 <th style="width: 95px;">版本</th>
                 <th style="width: 130px;">来源</th>
-                <th style="width: 95px;">状态</th>
+                <th style="width: 132px;">状态</th>
                 <th>功能简介</th>
                 <th style="width: 150px; text-align:right;">操作</th>
               </tr>
@@ -2711,9 +2713,29 @@
 
         allPlugins = data.plugins || [];
         renderPlugins(allPlugins);
+        renderPluginPendingBanner(data.runtime);
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--danger); padding:20px;">加载插件列表失败: ${escapeHtml(err.message)}</td></tr>`;
       }
+    }
+
+    // 顶部汇总提示：存在「配置已改、运行时未重启」的插件时高亮引导重启
+    function renderPluginPendingBanner(runtime) {
+      const el = document.getElementById('pluginPendingBanner');
+      if (!el) return;
+      const pending = (allPlugins || []).filter(p => p.pendingRestart === true);
+      if (pending.length === 0) { el.style.display = 'none'; el.innerHTML = ''; return; }
+
+      const names = pending.map(p => p.name || p.id).map(escapeHtml).join('、');
+      const snapAt = runtime && runtime.snapshotAt ? new Date(runtime.snapshotAt) : null;
+      const snapText = snapAt && !isNaN(snapAt.getTime())
+        ? `当前运行时加载于 ${snapAt.toLocaleString('zh-CN', { hour12: false })}`
+        : '当前运行时加载时刻未知';
+      el.innerHTML =
+        `⚠️ 有 <strong>${pending.length}</strong> 个插件的开关变更<strong>尚未生效</strong>（${names}）：` +
+        `配置已更新，但 ZCode 运行时仍在按旧配置加载。<br>` +
+        `ⓘ ${escapeHtml(snapText)}。请点击右上角「<strong>重启 ZCode 生效</strong>」使变更生效（Web 会短暂断开数秒）。`;
+      el.style.display = 'block';
     }
 
     function filterPlugins() {
@@ -2760,13 +2782,29 @@
         const enabled = p.enabled !== false;
 
         const isAutoIsolated = currentData?.autoIsolatedEvents?.some(ev => ev.plugin === name || ev.plugin === id);
+        // 中间态：配置已改、但 ZCode 运行时尚未重启，实际加载态仍是旧值
+        const pendingRestart = p.pendingRestart === true;
+        const runtimeKnown = p.runtimeKnown !== false;
         let statusBadge = '';
-        if (enabled) {
+        if (pendingRestart) {
+          const runtimeText = p.runtimeEnabled === true ? '运行时仍加载中' : '运行时未加载';
+          const title = `配置已${enabled ? '启用' : '停用'}，但当前 ZCode 运行时仍是「${p.runtimeEnabled === true ? '已启用' : '已停用'}」状态。需重启 ZCode 运行时后才会生效。`;
+          statusBadge =
+            `<span class="status-badge" style="background:#fffbeb; color:#b45309; border:1px solid #fde68a; white-space:nowrap;" title="${escapeHtml(title)}">` +
+              `<span class="dot" style="background:#f59e0b;"></span> 待重启生效` +
+            `</span>` +
+            `<div style="font-size:11px; color:var(--text-muted); margin-top:4px; line-height:1.5;">` +
+              `配置：${enabled ? '已启用' : '已停用'} · ${escapeHtml(runtimeText)}` +
+            `</div>`;
+        } else if (enabled) {
           statusBadge = '<span class="status-badge status-running"><span class="dot"></span> 已启用</span>';
         } else if (isAutoIsolated) {
           statusBadge = '<span class="status-badge status-stopped" style="background:#fffbeb; color:#b45309; border:1px solid #fde68a;" title="该插件因引发启动崩溃已被系统自动隔离停用"><span class="dot" style="background:#f59e0b;"></span> 已停用 (自愈隔离)</span>';
         } else {
           statusBadge = '<span class="status-badge status-stopped"><span class="dot"></span> 已停用</span>';
+        }
+        if (!runtimeKnown && !isAutoIsolated) {
+          statusBadge += '<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">运行时基线未知</div>';
         }
 
         const toggleBtn = enabled
