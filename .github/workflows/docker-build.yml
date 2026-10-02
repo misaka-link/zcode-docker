@@ -40,7 +40,9 @@ jobs:
       - name: Build Docker Image
         run: |
           chmod +x ./build.sh
-          ./build.sh --china-mirror=0
+          # CI 内固定使用本地镜像名，便于后续冒烟测试引用；
+          # 推送 GHCR 的标签在下方 "Tag and Push Docker Images" 步骤里统一打。
+          IMAGE_NAME=zcode-docker ./build.sh --china-mirror=0
 
       - name: Smoke Test Container
         run: |
